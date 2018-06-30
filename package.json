@@ -10,7 +10,8 @@
   "main": "dist/maptalks.snapend.js",
   "scripts": {
     "version": "gulp minify && git add -A dist",
-    "prepublish": "gulp minify"
+    "prepublish": "gulp minify",
+    "watch": "gulp watch"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.5",

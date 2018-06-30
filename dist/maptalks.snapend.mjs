@@ -2833,43 +2833,13 @@ var SnapEndPoint = function (_maptalks$Class) {
         return _this;
     }
 
-    SnapEndPoint.prototype.addTo = function addTo(map) {
-        var layerName = INTERNAL_LAYER_PREFIX + '_snapendpoint';
-        this._mousemoveLayer = new VectorLayer(layerName).addTo(map);
-        this._map = map;
-        this._resetGeosSet();
-        this.enable();
-        return this;
-    };
-
-    SnapEndPoint.prototype.enable = function enable() {
-        var map = this._map;
-        if (this.snaplayer) this._compositGeometries();
-        if (this._geosSet) {
-            this._registerEvents(map);
-            this._mousemoveLayer.show();
-        }
-        return this;
-    };
-
-    SnapEndPoint.prototype.disable = function disable() {
-        var map = this._map;
-        map.off('mousemove touchstart', this._mousemove);
-        map.off('mousedown', this._mousedown, this);
-        map.off('mouseup', this._mouseup, this);
-        delete this._mousemove;
-        delete this._mousedown;
-        delete this._mouseup;
-        this._mousemoveLayer.hide();
-        this._resetGeosSet();
-        return this;
-    };
-
     SnapEndPoint.prototype.setLayer = function setLayer(layer) {
         var _this2 = this;
 
+        console.log('setLayer');
         if (layer instanceof VectorLayer) {
             this.snaplayer = layer;
+            this._addTo(layer.map);
             this._compositGeometries();
             this.snaplayer.on('addgeo', function () {
                 return _this2._compositGeometries();
@@ -2878,52 +2848,54 @@ var SnapEndPoint = function (_maptalks$Class) {
                 return _this2._resetGeosSet();
             }, this);
             this._mousemoveLayer.bringToFront();
+            this.bindDrawTool(layer.map._map_tool);
         }
         return this;
+    };
+
+    SnapEndPoint.prototype._addTo = function _addTo(map) {
+        var layerName = INTERNAL_LAYER_PREFIX + '_snapendpoint';
+        this._mousemoveLayer = new VectorLayer(layerName).addTo(map);
+        this._map = map;
+        this._resetGeosSet();
+        return this;
+    };
+
+    SnapEndPoint.prototype._compositGeometries = function _compositGeometries() {
+        var geometries = this.snaplayer.getGeometries();
+        this._geosSet = [];
+    };
+
+    SnapEndPoint.prototype._resetGeosSet = function _resetGeosSet() {
+        this._geosSet = [];
     };
 
     SnapEndPoint.prototype.bindDrawTool = function bindDrawTool(drawTool) {
         var _this3 = this;
 
+        console.log('bindDrawTool');
         if (drawTool instanceof DrawTool) {
-            drawTool.on('drawstart', function (e) {
-                return _this3._resetCoordsAndPoint(e);
+            this._drawTool = drawTool;
+            drawTool.on('enable', function (e) {
+                return _this3.enable();
             }, this);
-            drawTool.on('mousemove', function (e) {
-                return _this3._resetCoordinates(e.target._geometry);
+            drawTool.on('disable', function (e) {
+                return _this3.disable();
             }, this);
-            drawTool.on('drawvertex', function (e) {
-                return _this3._resetCoordsAndPoint(e);
-            }, this);
-            drawTool.on('drawend', function (e) {
-                return _this3._resetCoordinates(e.geometry);
-            }, this);
+            if (drawTool.isEnabled()) this.enable();
         }
+    };
+
+    SnapEndPoint.prototype.enable = function enable() {
+        console.log('enable');
+        this._compositGeometries();
+        this._registerMapEvents();
+        this._registerDrawToolEvents();
+        this._mousemoveLayer.show();
         return this;
     };
 
-    SnapEndPoint.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {
-        this._resetCoordinates(e.target._geometry);
-        this._resetClickPoint(e.target._clickCoords);
-    };
-
-    SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
-        if (this.snapPoint) {}
-    };
-
-    SnapEndPoint.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
-        if (this.snapPoint) {
-            var _snapPoint = this.snapPoint,
-                x = _snapPoint.x,
-                y = _snapPoint.y;
-            var length = clickCoords.length;
-
-            clickCoords[length - 1].x = x;
-            clickCoords[length - 1].y = y;
-        }
-    };
-
-    SnapEndPoint.prototype._registerEvents = function _registerEvents() {
+    SnapEndPoint.prototype._registerMapEvents = function _registerMapEvents() {
         var _this4 = this;
 
         if (!this._mousemove) {
@@ -2948,13 +2920,74 @@ var SnapEndPoint = function (_maptalks$Class) {
         console.log(e);
     };
 
-    SnapEndPoint.prototype._compositGeometries = function _compositGeometries() {
-        var geometries = this.snaplayer.getGeometries();
-        this._geosSet = [];
+    SnapEndPoint.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
+        var _this5 = this;
+
+        var drawTool = this._drawTool;
+        drawTool.on('drawstart', function (e) {
+            return _this5._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.on('mousemove', function (e) {
+            return _this5._resetCoordinates(e.target._geometry);
+        }, this);
+        drawTool.on('drawvertex', function (e) {
+            return _this5._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.on('drawend', function (e) {
+            return _this5._resetCoordinates(e.geometry);
+        }, this);
     };
 
-    SnapEndPoint.prototype._resetGeosSet = function _resetGeosSet() {
-        this._geosSet = [];
+    SnapEndPoint.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {
+        this._resetCoordinates(e.target._geometry);
+        this._resetClickPoint(e.target._clickCoords);
+    };
+
+    SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
+        if (this.snapPoint) {}
+    };
+
+    SnapEndPoint.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
+        if (this.snapPoint) {
+            var _snapPoint = this.snapPoint,
+                x = _snapPoint.x,
+                y = _snapPoint.y;
+            var length = clickCoords.length;
+
+            clickCoords[length - 1].x = x;
+            clickCoords[length - 1].y = y;
+        }
+    };
+
+    SnapEndPoint.prototype.disable = function disable() {
+        var _this6 = this;
+
+        console.log('disable');
+        var map = this._map;
+        map.off('mousemove touchstart', this._mousemove, this);
+        map.off('mousedown', this._mousedown, this);
+        map.off('mouseup', this._mouseup, this);
+
+        var drawTool = this._drawTool;
+        drawTool.off('drawstart', function (e) {
+            return _this6._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.off('mousemove', function (e) {
+            return _this6._resetCoordinates(e.target._geometry);
+        }, this);
+        drawTool.off('drawvertex', function (e) {
+            return _this6._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.off('drawend', function (e) {
+            return _this6._resetCoordinates(e.geometry);
+        }, this);
+
+        delete this._mousemove;
+        delete this._mousedown;
+        delete this._mouseup;
+        this._mousemoveLayer.hide();
+        this._resetGeosSet();
+        return this;
     };
 
     return SnapEndPoint;

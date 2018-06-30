@@ -13,10 +13,7 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'Polygon' }).addTo(map).disable()
 
-const snap = new maptalks.SnapEndPoint()
-    .addTo(map)
-    .setLayer(layerSketch)
-    .bindDrawTool(drawTool)
+const snap = new maptalks.SnapEndPoint().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
