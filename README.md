@@ -1,0 +1,2 @@
+# maptalks.snapend.js
+
