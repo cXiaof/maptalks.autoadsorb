@@ -1,0 +1,25 @@
+{
+  "name": "maptalks.snapend",
+  "version": "0.1.0",
+  "description": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "dist/maptalks.snapend.js",
+  "scripts": {
+    "version": "gulp minify && git add -A dist",
+    "prepublish": "gulp minify"
+  },
+  "devDependencies": {
+    "babel-eslint": "^8.2.5",
+    "babel-preset-env": "^1.7.0",
+    "gulp": "^3.9.1",
+    "maptalks": "^0.40.4",
+    "maptalks-build-helpers": "^0.5.0"
+  },
+  "dependencies": {
+    "geojson-rbush": "^3.1.1"
+  }
+}
