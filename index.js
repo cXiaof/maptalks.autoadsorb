@@ -10,17 +10,61 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     setLayer(layer) {
-        console.log('setLayer')
         if (layer instanceof maptalks.VectorLayer) {
             this.snaplayer = layer
             this._addTo(layer.map)
-            this._compositGeometries()
             this.snaplayer.on('addgeo', () => this._compositGeometries(), this)
             this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this._mousemoveLayer.bringToFront()
             this.bindDrawTool(layer.map._map_tool)
         }
         return this
+    }
+
+    bindDrawTool(drawTool) {
+        if (drawTool instanceof maptalks.DrawTool) {
+            this._drawTool = drawTool
+            drawTool.on('enable', (e) => this.enable(), this)
+            drawTool.on('disable', (e) => this.disable(), this)
+            drawTool.on('remove', (e) => this.remove(), this)
+            if (drawTool.isEnabled()) this.enable()
+        }
+    }
+
+    enable() {
+        this._compositGeometries()
+        this._registerMapEvents()
+        this._registerDrawToolEvents()
+        this._mousemoveLayer.show()
+        return this
+    }
+
+    disable() {
+        const map = this._map
+        map.off('mousemove touchstart', this._mousemove, this)
+        map.off('mousedown', this._mousedown, this)
+        map.off('mouseup', this._mouseup, this)
+
+        const drawTool = this._drawTool
+        drawTool.off('drawstart', (e) => this._resetCoordsAndPoint(e), this)
+        drawTool.off('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
+        drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
+        drawTool.off('drawend', (e) => this._resetCoordinates(e.geometry), this)
+
+        delete this._mousemove
+        delete this._mousedown
+        delete this._mouseup
+        this._mousemoveLayer.hide()
+        this._resetGeosSet()
+        return this
+    }
+
+    remove() {
+        this.disable()
+        this._marker.remove()
+        this._mousemoveLayer.remove()
+        delete this._marker
+        delete this._mousemoveLayer
     }
 
     _addTo(map) {
@@ -31,49 +75,8 @@ export class SnapEndPoint extends maptalks.Class {
         return this
     }
 
-    _compositGeometries() {
-        const geometries = this.snaplayer.getGeometries()
-        this._geosSet = []
-    }
-
     _resetGeosSet() {
         this._geosSet = []
-    }
-
-    bindDrawTool(drawTool) {
-        console.log('bindDrawTool')
-        if (drawTool instanceof maptalks.DrawTool) {
-            this._drawTool = drawTool
-            drawTool.on('enable', (e) => this.enable(), this)
-            drawTool.on('disable', (e) => this.disable(), this)
-            if (drawTool.isEnabled()) this.enable()
-        }
-    }
-
-    enable() {
-        console.log('enable')
-        this._compositGeometries()
-        this._registerMapEvents()
-        this._registerDrawToolEvents()
-        this._mousemoveLayer.show()
-        return this
-    }
-
-    _registerMapEvents() {
-        if (!this._mousemove) {
-            const map = this._map
-            this._needFindGeometry = true
-            this._mousemove = (e) => this._mousemoveEvents(e)
-            this._mousedown = () => (this._needFindGeometry = false)
-            this._mouseup = () => (this._needFindGeometry = true)
-            map.on('mousemove touchstart', this._mousemove, this)
-            map.on('mousedown', this._mousedown, this)
-            map.on('mouseup', this._mouseup, this)
-        }
-    }
-
-    _mousemoveEvents(e) {
-        console.log(e)
     }
 
     _registerDrawToolEvents() {
@@ -103,25 +106,178 @@ export class SnapEndPoint extends maptalks.Class {
         }
     }
 
-    disable() {
-        console.log('disable')
+    _registerMapEvents() {
+        if (!this._mousemove) {
+            const map = this._map
+            this._needFindGeometry = true
+            this._mousemove = (e) => this._mousemoveEvents(e)
+            this._mousedown = () => (this._needFindGeometry = false)
+            this._mouseup = () => (this._needFindGeometry = true)
+            map.on('mousemove touchstart', this._mousemove, this)
+            map.on('mousedown', this._mousedown, this)
+            map.on('mouseup', this._mouseup, this)
+        }
+    }
+
+    _mousemoveEvents(event) {
+        const { coordinate } = event
+        this.mousePoint = coordinate
+
+        const hasMarler = !!this._marker
+        if (hasMarler) this._marker.setCoordinates(coordinate)
+        if (!hasMarler)
+            this._marker = new maptalks.Marker(coordinate, {
+                symbol: {}
+            }).addTo(this._mousemoveLayer)
+
+        this._updateSnapPoint(coordinate)
+    }
+
+    _updateSnapPoint(coordinate) {
+        if (this._needFindGeometry) {
+            const availGeometries = this._findGeometry(coordinate)
+
+            this.snapPoint =
+                availGeometries.features.length > 0 ? this._getSnapPoint(availGeometries) : null
+
+            if (this.snapPoint) {
+                const { x, y } = this.snapPoint
+                this._marker.setCoordinates([x, y])
+            }
+        }
+    }
+
+    _getSnapPoint(availGeometries) {
+        const { distance, geoObject } = this._findNearestGeometries(availGeometries.features)
+
+        if (this._validDistance(distance)) return null
+
+        const { type, coordinates } = geoObject.geometry
+        const snapPoint = {
+            x: coordinates[0],
+            y: coordinates[1]
+        }
+        return snapPoint
+    }
+
+    _findNearestGeometries(features) {
+        let geoObjects = this._setDistance(features)
+        geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
+        return geoObjects[0]
+    }
+
+    _compare(data, propertyName) {
+        return (object1, object2) => {
+            const value1 = object1[propertyName]
+            const value2 = object2[propertyName]
+            return value2 < value1
+        }
+    }
+
+    _setDistance(features) {
+        const geoObjects = []
+        features.forEach((feature) => {
+            const distance = this._distToPoint(feature)
+            geoObjects.push({
+                geoObject: feature,
+                distance
+            })
+        })
+        return geoObjects
+    }
+
+    _distToPoint(feature) {
+        const { x, y } = this.mousePoint
+        const from = [x, y]
+        const to = feature.geometry.coordinates
+        return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2))
+    }
+
+    _validDistance(distance) {
         const map = this._map
-        map.off('mousemove touchstart', this._mousemove, this)
-        map.off('mousedown', this._mousedown, this)
-        map.off('mouseup', this._mouseup, this)
+        const resolution = map.getResolution()
+        const tolerance = 10
+        return distance / resolution > tolerance
+    }
 
-        const drawTool = this._drawTool
-        drawTool.off('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.off('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
-        drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.off('drawend', (e) => this._resetCoordinates(e.geometry), this)
+    _findGeometry(coordinate) {
+        if (this._geosSet) {
+            const features = this._geosSet
+            this.tree.clear()
+            this.tree.load({ type: 'FeatureCollection', features })
+            this.inspectExtent = this._createInspectExtent(coordinate)
+            const availGeometries = this.tree.search(this.inspectExtent)
+            return availGeometries
+        }
+        return null
+    }
 
-        delete this._mousemove
-        delete this._mousedown
-        delete this._mouseup
-        this._mousemoveLayer.hide()
-        this._resetGeosSet()
-        return this
+    _createInspectExtent(coordinate) {
+        const tolerance = 10
+        const map = this._map
+        const zoom = map.getZoom()
+        const { x, y } = map.coordinateToPoint(coordinate, zoom)
+        const lefttop = map.pointToCoordinate(
+            new maptalks.Point([x - tolerance, y - tolerance]),
+            zoom
+        )
+        const righttop = map.pointToCoordinate(
+            new maptalks.Point([x + tolerance, y - tolerance]),
+            zoom
+        )
+        const leftbottom = map.pointToCoordinate(
+            new maptalks.Point([x - tolerance, y + tolerance]),
+            zoom
+        )
+        const rightbottom = map.pointToCoordinate(
+            new maptalks.Point([x + tolerance, y + tolerance]),
+            zoom
+        )
+        return {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'Polygon',
+                coordinates: [
+                    [
+                        [lefttop.x, lefttop.y],
+                        [righttop.x, righttop.y],
+                        [rightbottom.x, rightbottom.y],
+                        [leftbottom.x, leftbottom.y]
+                    ]
+                ]
+            }
+        }
+    }
+
+    _compositGeometries() {
+        const geometries = this.snaplayer.getGeometries()
+        let geos = []
+        geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
+        this._geosSet = geos
+    }
+
+    _parserToPoints(geo) {
+        const type = geo.getType()
+        let coordinates =
+            type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates()
+        let geos = []
+        const isPolygon = coordinates[0] instanceof Array
+        if (isPolygon) coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
+        if (!isPolygon) {
+            const isPoint = coordinates instanceof Array
+            if (!isPoint) coordinates = [coordinates]
+            geos.push(...this._createMarkers(coordinates))
+        }
+        return geos
+    }
+
+    _createMarkers(coords) {
+        const markers = []
+        coords.forEach((coord) =>
+            markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
+        )
+        return markers
     }
 }
 

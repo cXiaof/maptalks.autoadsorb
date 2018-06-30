@@ -3,7 +3,7 @@
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
-import { Class, DrawTool, INTERNAL_LAYER_PREFIX, VectorLayer } from 'maptalks';
+import { Class, DrawTool, INTERNAL_LAYER_PREFIX, Marker, Point, VectorLayer } from 'maptalks';
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -2836,11 +2836,9 @@ var SnapEndPoint = function (_maptalks$Class) {
     SnapEndPoint.prototype.setLayer = function setLayer(layer) {
         var _this2 = this;
 
-        console.log('setLayer');
         if (layer instanceof VectorLayer) {
             this.snaplayer = layer;
             this._addTo(layer.map);
-            this._compositGeometries();
             this.snaplayer.on('addgeo', function () {
                 return _this2._compositGeometries();
             }, this);
@@ -2853,27 +2851,9 @@ var SnapEndPoint = function (_maptalks$Class) {
         return this;
     };
 
-    SnapEndPoint.prototype._addTo = function _addTo(map) {
-        var layerName = INTERNAL_LAYER_PREFIX + '_snapendpoint';
-        this._mousemoveLayer = new VectorLayer(layerName).addTo(map);
-        this._map = map;
-        this._resetGeosSet();
-        return this;
-    };
-
-    SnapEndPoint.prototype._compositGeometries = function _compositGeometries() {
-        var geometries = this.snaplayer.getGeometries();
-        this._geosSet = [];
-    };
-
-    SnapEndPoint.prototype._resetGeosSet = function _resetGeosSet() {
-        this._geosSet = [];
-    };
-
     SnapEndPoint.prototype.bindDrawTool = function bindDrawTool(drawTool) {
         var _this3 = this;
 
-        console.log('bindDrawTool');
         if (drawTool instanceof DrawTool) {
             this._drawTool = drawTool;
             drawTool.on('enable', function (e) {
@@ -2882,12 +2862,14 @@ var SnapEndPoint = function (_maptalks$Class) {
             drawTool.on('disable', function (e) {
                 return _this3.disable();
             }, this);
+            drawTool.on('remove', function (e) {
+                return _this3.remove();
+            }, this);
             if (drawTool.isEnabled()) this.enable();
         }
     };
 
     SnapEndPoint.prototype.enable = function enable() {
-        console.log('enable');
         this._compositGeometries();
         this._registerMapEvents();
         this._registerDrawToolEvents();
@@ -2895,29 +2877,54 @@ var SnapEndPoint = function (_maptalks$Class) {
         return this;
     };
 
-    SnapEndPoint.prototype._registerMapEvents = function _registerMapEvents() {
+    SnapEndPoint.prototype.disable = function disable() {
         var _this4 = this;
 
-        if (!this._mousemove) {
-            var map = this._map;
-            this._needFindGeometry = true;
-            this._mousemove = function (e) {
-                return _this4._mousemoveEvents(e);
-            };
-            this._mousedown = function () {
-                return _this4._needFindGeometry = false;
-            };
-            this._mouseup = function () {
-                return _this4._needFindGeometry = true;
-            };
-            map.on('mousemove touchstart', this._mousemove, this);
-            map.on('mousedown', this._mousedown, this);
-            map.on('mouseup', this._mouseup, this);
-        }
+        var map = this._map;
+        map.off('mousemove touchstart', this._mousemove, this);
+        map.off('mousedown', this._mousedown, this);
+        map.off('mouseup', this._mouseup, this);
+
+        var drawTool = this._drawTool;
+        drawTool.off('drawstart', function (e) {
+            return _this4._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.off('mousemove', function (e) {
+            return _this4._resetCoordinates(e.target._geometry);
+        }, this);
+        drawTool.off('drawvertex', function (e) {
+            return _this4._resetCoordsAndPoint(e);
+        }, this);
+        drawTool.off('drawend', function (e) {
+            return _this4._resetCoordinates(e.geometry);
+        }, this);
+
+        delete this._mousemove;
+        delete this._mousedown;
+        delete this._mouseup;
+        this._mousemoveLayer.hide();
+        this._resetGeosSet();
+        return this;
     };
 
-    SnapEndPoint.prototype._mousemoveEvents = function _mousemoveEvents(e) {
-        console.log(e);
+    SnapEndPoint.prototype.remove = function remove() {
+        this.disable();
+        this._marker.remove();
+        this._mousemoveLayer.remove();
+        delete this._marker;
+        delete this._mousemoveLayer;
+    };
+
+    SnapEndPoint.prototype._addTo = function _addTo(map) {
+        var layerName = INTERNAL_LAYER_PREFIX + '_snapendpoint';
+        this._mousemoveLayer = new VectorLayer(layerName).addTo(map);
+        this._map = map;
+        this._resetGeosSet();
+        return this;
+    };
+
+    SnapEndPoint.prototype._resetGeosSet = function _resetGeosSet() {
+        this._geosSet = [];
     };
 
     SnapEndPoint.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
@@ -2959,35 +2966,190 @@ var SnapEndPoint = function (_maptalks$Class) {
         }
     };
 
-    SnapEndPoint.prototype.disable = function disable() {
+    SnapEndPoint.prototype._registerMapEvents = function _registerMapEvents() {
         var _this6 = this;
 
-        console.log('disable');
+        if (!this._mousemove) {
+            var map = this._map;
+            this._needFindGeometry = true;
+            this._mousemove = function (e) {
+                return _this6._mousemoveEvents(e);
+            };
+            this._mousedown = function () {
+                return _this6._needFindGeometry = false;
+            };
+            this._mouseup = function () {
+                return _this6._needFindGeometry = true;
+            };
+            map.on('mousemove touchstart', this._mousemove, this);
+            map.on('mousedown', this._mousedown, this);
+            map.on('mouseup', this._mouseup, this);
+        }
+    };
+
+    SnapEndPoint.prototype._mousemoveEvents = function _mousemoveEvents(event) {
+        var coordinate = event.coordinate;
+
+        this.mousePoint = coordinate;
+
+        var hasMarler = !!this._marker;
+        if (hasMarler) this._marker.setCoordinates(coordinate);
+        if (!hasMarler) this._marker = new Marker(coordinate, {
+            symbol: {}
+        }).addTo(this._mousemoveLayer);
+
+        this._updateSnapPoint(coordinate);
+    };
+
+    SnapEndPoint.prototype._updateSnapPoint = function _updateSnapPoint(coordinate) {
+        if (this._needFindGeometry) {
+            var availGeometries = this._findGeometry(coordinate);
+
+            this.snapPoint = availGeometries.features.length > 0 ? this._getSnapPoint(availGeometries) : null;
+
+            if (this.snapPoint) {
+                var _snapPoint2 = this.snapPoint,
+                    x = _snapPoint2.x,
+                    y = _snapPoint2.y;
+
+                this._marker.setCoordinates([x, y]);
+            }
+        }
+    };
+
+    SnapEndPoint.prototype._getSnapPoint = function _getSnapPoint(availGeometries) {
+        var _findNearestGeometrie = this._findNearestGeometries(availGeometries.features),
+            distance = _findNearestGeometrie.distance,
+            geoObject = _findNearestGeometrie.geoObject;
+
+        if (this._validDistance(distance)) return null;
+
+        var _geoObject$geometry = geoObject.geometry,
+            type = _geoObject$geometry.type,
+            coordinates = _geoObject$geometry.coordinates;
+
+        var snapPoint = {
+            x: coordinates[0],
+            y: coordinates[1]
+        };
+        return snapPoint;
+    };
+
+    SnapEndPoint.prototype._findNearestGeometries = function _findNearestGeometries(features) {
+        var geoObjects = this._setDistance(features);
+        geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'));
+        return geoObjects[0];
+    };
+
+    SnapEndPoint.prototype._compare = function _compare(data, propertyName) {
+        return function (object1, object2) {
+            var value1 = object1[propertyName];
+            var value2 = object2[propertyName];
+            return value2 < value1;
+        };
+    };
+
+    SnapEndPoint.prototype._setDistance = function _setDistance(features) {
+        var _this7 = this;
+
+        var geoObjects = [];
+        features.forEach(function (feature) {
+            var distance = _this7._distToPoint(feature);
+            geoObjects.push({
+                geoObject: feature,
+                distance: distance
+            });
+        });
+        return geoObjects;
+    };
+
+    SnapEndPoint.prototype._distToPoint = function _distToPoint(feature) {
+        var _mousePoint = this.mousePoint,
+            x = _mousePoint.x,
+            y = _mousePoint.y;
+
+        var from = [x, y];
+        var to = feature.geometry.coordinates;
+        return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2));
+    };
+
+    SnapEndPoint.prototype._validDistance = function _validDistance(distance) {
         var map = this._map;
-        map.off('mousemove touchstart', this._mousemove, this);
-        map.off('mousedown', this._mousedown, this);
-        map.off('mouseup', this._mouseup, this);
+        var resolution = map.getResolution();
+        var tolerance = 10;
+        return distance / resolution > tolerance;
+    };
 
-        var drawTool = this._drawTool;
-        drawTool.off('drawstart', function (e) {
-            return _this6._resetCoordsAndPoint(e);
-        }, this);
-        drawTool.off('mousemove', function (e) {
-            return _this6._resetCoordinates(e.target._geometry);
-        }, this);
-        drawTool.off('drawvertex', function (e) {
-            return _this6._resetCoordsAndPoint(e);
-        }, this);
-        drawTool.off('drawend', function (e) {
-            return _this6._resetCoordinates(e.geometry);
-        }, this);
+    SnapEndPoint.prototype._findGeometry = function _findGeometry(coordinate) {
+        if (this._geosSet) {
+            var features = this._geosSet;
+            this.tree.clear();
+            this.tree.load({ type: 'FeatureCollection', features: features });
+            this.inspectExtent = this._createInspectExtent(coordinate);
+            var availGeometries = this.tree.search(this.inspectExtent);
+            return availGeometries;
+        }
+        return null;
+    };
 
-        delete this._mousemove;
-        delete this._mousedown;
-        delete this._mouseup;
-        this._mousemoveLayer.hide();
-        this._resetGeosSet();
-        return this;
+    SnapEndPoint.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
+        var tolerance = 10;
+        var map = this._map;
+        var zoom = map.getZoom();
+
+        var _map$coordinateToPoin = map.coordinateToPoint(coordinate, zoom),
+            x = _map$coordinateToPoin.x,
+            y = _map$coordinateToPoin.y;
+
+        var lefttop = map.pointToCoordinate(new Point([x - tolerance, y - tolerance]), zoom);
+        var righttop = map.pointToCoordinate(new Point([x + tolerance, y - tolerance]), zoom);
+        var leftbottom = map.pointToCoordinate(new Point([x - tolerance, y + tolerance]), zoom);
+        var rightbottom = map.pointToCoordinate(new Point([x + tolerance, y + tolerance]), zoom);
+        return {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[[lefttop.x, lefttop.y], [righttop.x, righttop.y], [rightbottom.x, rightbottom.y], [leftbottom.x, leftbottom.y]]]
+            }
+        };
+    };
+
+    SnapEndPoint.prototype._compositGeometries = function _compositGeometries() {
+        var _this8 = this;
+
+        var geometries = this.snaplayer.getGeometries();
+        var geos = [];
+        geometries.forEach(function (geo) {
+            return geos.push.apply(geos, _this8._parserToPoints(geo));
+        });
+        this._geosSet = geos;
+    };
+
+    SnapEndPoint.prototype._parserToPoints = function _parserToPoints(geo) {
+        var _this9 = this;
+
+        var type = geo.getType();
+        var coordinates = type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates();
+        var geos = [];
+        var isPolygon = coordinates[0] instanceof Array;
+        if (isPolygon) coordinates.forEach(function (coords) {
+            return geos.push.apply(geos, _this9._createMarkers(coords));
+        });
+        if (!isPolygon) {
+            var isPoint = coordinates instanceof Array;
+            if (!isPoint) coordinates = [coordinates];
+            geos.push.apply(geos, this._createMarkers(coordinates));
+        }
+        return geos;
+    };
+
+    SnapEndPoint.prototype._createMarkers = function _createMarkers(coords) {
+        var markers = [];
+        coords.forEach(function (coord) {
+            return markers.push(new Marker(coord, { properties: {} }).toGeoJSON());
+        });
+        return markers;
     };
 
     return SnapEndPoint;
