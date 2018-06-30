@@ -1,6 +1,8 @@
 import * as maptalks from 'maptalks'
 import rbush from 'geojson-rbush'
 
+const options = {}
+
 export class SnapEndPoint extends maptalks.Class {
     constructor(options) {
         super(options)
@@ -13,6 +15,7 @@ export class SnapEndPoint extends maptalks.Class {
         this._map = map
         this._resetGeosSet()
         this.enable()
+        return this
     }
 
     enable() {
@@ -22,6 +25,7 @@ export class SnapEndPoint extends maptalks.Class {
             this._registerEvents(map)
             this._mousemoveLayer.show()
         }
+        return this
     }
 
     disable() {
@@ -34,6 +38,7 @@ export class SnapEndPoint extends maptalks.Class {
         delete this._mouseup
         this._mousemoveLayer.hide()
         this._resetGeosSet()
+        return this
     }
 
     setLayer(layer) {
@@ -44,6 +49,7 @@ export class SnapEndPoint extends maptalks.Class {
             this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this._mousemoveLayer.bringToFront()
         }
+        return this
     }
 
     bindDrawTool(drawTool) {
@@ -53,6 +59,7 @@ export class SnapEndPoint extends maptalks.Class {
             drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
             drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry), this)
         }
+        return this
     }
 
     _resetCoordsAndPoint(e) {
@@ -68,8 +75,9 @@ export class SnapEndPoint extends maptalks.Class {
     _resetClickPoint(clickCoords) {
         if (this.snapPoint) {
             const { x, y } = this.snapPoint
-            clickCoords[clickCoords.length - 1].x = x
-            clickCoords[clickCoords.length - 1].y = y
+            const { length } = clickCoords
+            clickCoords[length - 1].x = x
+            clickCoords[length - 1].y = y
         }
     }
 
@@ -99,3 +107,5 @@ export class SnapEndPoint extends maptalks.Class {
         this._geosSet = []
     }
 }
+
+SnapEndPoint.mergeOptions(options)
