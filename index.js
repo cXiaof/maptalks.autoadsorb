@@ -10,7 +10,7 @@ export class SnapEndPoint extends maptalks.Class {
         this._distance = 10
     }
 
-    bindLayer(layer) {
+    setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
             this._snaplayer = layer
             this._addToMap(layer.map)

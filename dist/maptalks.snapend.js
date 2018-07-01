@@ -2838,7 +2838,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         return _this;
     }
 
-    SnapEndPoint.prototype.bindLayer = function bindLayer(layer) {
+    SnapEndPoint.prototype.setLayer = function setLayer(layer) {
         var _this2 = this;
 
         if (layer instanceof maptalks.VectorLayer) {
