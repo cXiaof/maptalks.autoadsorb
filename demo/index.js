@@ -14,11 +14,12 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-const snap = new maptalks.SnapEndPoint().setLayer(layerSketch)
+// const snap = new maptalks.SnapEndPoint().bindLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
     geometry.addTo(layerSketch)
+    // new maptalks.SnapEndPoint().bindGeometry(geometry)
 })
 
 const modes = [

@@ -2834,16 +2834,16 @@ var SnapEndPoint = function (_maptalks$Class) {
         return _this;
     }
 
-    SnapEndPoint.prototype.setLayer = function setLayer(layer) {
+    SnapEndPoint.prototype.bindLayer = function bindLayer(layer) {
         var _this2 = this;
 
         if (layer instanceof VectorLayer) {
-            this.snaplayer = layer;
+            this._snaplayer = layer;
             this._addToMap(layer.map);
-            this.snaplayer.on('addgeo', function () {
+            this._snaplayer.on('addgeo', function () {
                 return _this2._updateGeosSet();
             }, this);
-            this.snaplayer.on('clear', function () {
+            this._snaplayer.on('clear', function () {
                 return _this2._resetGeosSet();
             }, this);
             this._mousemoveLayer.bringToFront();
@@ -2912,6 +2912,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         this.disable();
         this._marker.remove();
         this._mousemoveLayer.remove();
+        delete this._drawTool;
         delete this._marker;
         delete this._mousemoveLayer;
     };
@@ -2927,7 +2928,7 @@ var SnapEndPoint = function (_maptalks$Class) {
     SnapEndPoint.prototype._updateGeosSet = function _updateGeosSet() {
         var _this5 = this;
 
-        var geometries = this.snaplayer.getGeometries();
+        var geometries = this._snaplayer.getGeometries();
         var geos = [];
         geometries.forEach(function (geo) {
             return geos.push.apply(geos, _this5._parserToPoints(geo));

@@ -10,12 +10,12 @@ export class SnapEndPoint extends maptalks.Class {
         this._distance = 10
     }
 
-    setLayer(layer) {
+    bindLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
-            this.snaplayer = layer
+            this._snaplayer = layer
             this._addToMap(layer.map)
-            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
-            this.snaplayer.on('clear', () => this._resetGeosSet(), this)
+            this._snaplayer.on('addgeo', () => this._updateGeosSet(), this)
+            this._snaplayer.on('clear', () => this._resetGeosSet(), this)
             this._mousemoveLayer.bringToFront()
             this.bindDrawTool(layer.map._map_tool)
         }
@@ -64,6 +64,7 @@ export class SnapEndPoint extends maptalks.Class {
         this.disable()
         this._marker.remove()
         this._mousemoveLayer.remove()
+        delete this._drawTool
         delete this._marker
         delete this._mousemoveLayer
     }
@@ -77,7 +78,7 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this.snaplayer.getGeometries()
+        const geometries = this._snaplayer.getGeometries()
         let geos = []
         geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
         this._geosSet = geos
