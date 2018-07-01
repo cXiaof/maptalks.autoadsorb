@@ -75,35 +75,38 @@ export class SnapEndPoint extends maptalks.Class {
         return this
     }
 
+    _compositGeometries() {
+        const geometries = this.snaplayer.getGeometries()
+        let geos = []
+        geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
+        this._geosSet = geos
+    }
+
+    _parserToPoints(geo) {
+        const type = geo.getType()
+        let coordinates =
+            type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates()
+        let geos = []
+        const isPolygon = coordinates[0] instanceof Array
+        if (isPolygon) coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
+        if (!isPolygon) {
+            const isPoint = coordinates instanceof Array
+            if (!isPoint) coordinates = [coordinates]
+            geos.push(...this._createMarkers(coordinates))
+        }
+        return geos
+    }
+
+    _createMarkers(coords) {
+        const markers = []
+        coords.forEach((coord) =>
+            markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
+        )
+        return markers
+    }
+
     _resetGeosSet() {
         this._geosSet = []
-    }
-
-    _registerDrawToolEvents() {
-        const drawTool = this._drawTool
-        drawTool.on('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
-        drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry), this)
-    }
-
-    _resetCoordsAndPoint(e) {
-        this._resetCoordinates(e.target._geometry)
-        this._resetClickPoint(e.target._clickCoords)
-    }
-
-    _resetCoordinates(geometry) {
-        if (this.snapPoint) {
-        }
-    }
-
-    _resetClickPoint(clickCoords) {
-        if (this.snapPoint) {
-            const { x, y } = this.snapPoint
-            const { length } = clickCoords
-            clickCoords[length - 1].x = x
-            clickCoords[length - 1].y = y
-        }
     }
 
     _registerMapEvents() {
@@ -145,59 +148,6 @@ export class SnapEndPoint extends maptalks.Class {
                 this._marker.setCoordinates([x, y])
             }
         }
-    }
-
-    _getSnapPoint(availGeometries) {
-        const { distance, geoObject } = this._findNearestGeometries(availGeometries.features)
-
-        if (this._validDistance(distance)) return null
-
-        const { type, coordinates } = geoObject.geometry
-        const snapPoint = {
-            x: coordinates[0],
-            y: coordinates[1]
-        }
-        return snapPoint
-    }
-
-    _findNearestGeometries(features) {
-        let geoObjects = this._setDistance(features)
-        geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
-        return geoObjects[0]
-    }
-
-    _compare(data, propertyName) {
-        return (object1, object2) => {
-            const value1 = object1[propertyName]
-            const value2 = object2[propertyName]
-            return value2 < value1
-        }
-    }
-
-    _setDistance(features) {
-        const geoObjects = []
-        features.forEach((feature) => {
-            const distance = this._distToPoint(feature)
-            geoObjects.push({
-                geoObject: feature,
-                distance
-            })
-        })
-        return geoObjects
-    }
-
-    _distToPoint(feature) {
-        const { x, y } = this.mousePoint
-        const from = [x, y]
-        const to = feature.geometry.coordinates
-        return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2))
-    }
-
-    _validDistance(distance) {
-        const map = this._map
-        const resolution = map.getResolution()
-        const tolerance = 10
-        return distance / resolution > tolerance
     }
 
     _findGeometry(coordinate) {
@@ -250,34 +200,84 @@ export class SnapEndPoint extends maptalks.Class {
         }
     }
 
-    _compositGeometries() {
-        const geometries = this.snaplayer.getGeometries()
-        let geos = []
-        geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
-        this._geosSet = geos
-    }
+    _getSnapPoint(availGeometries) {
+        const { distance, geoObject } = this._findNearestGeometries(availGeometries.features)
 
-    _parserToPoints(geo) {
-        const type = geo.getType()
-        let coordinates =
-            type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates()
-        let geos = []
-        const isPolygon = coordinates[0] instanceof Array
-        if (isPolygon) coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
-        if (!isPolygon) {
-            const isPoint = coordinates instanceof Array
-            if (!isPoint) coordinates = [coordinates]
-            geos.push(...this._createMarkers(coordinates))
+        if (this._validDistance(distance)) return null
+
+        const { type, coordinates } = geoObject.geometry
+        const snapPoint = {
+            x: coordinates[0],
+            y: coordinates[1]
         }
-        return geos
+        return snapPoint
     }
 
-    _createMarkers(coords) {
-        const markers = []
-        coords.forEach((coord) =>
-            markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
-        )
-        return markers
+    _findNearestGeometries(features) {
+        let geoObjects = this._setDistance(features)
+        geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
+        return geoObjects[0]
+    }
+
+    _setDistance(features) {
+        const geoObjects = []
+        features.forEach((feature) => {
+            const distance = this._distToPoint(feature)
+            geoObjects.push({
+                geoObject: feature,
+                distance
+            })
+        })
+        return geoObjects
+    }
+
+    _distToPoint(feature) {
+        const { x, y } = this.mousePoint
+        const from = [x, y]
+        const to = feature.geometry.coordinates
+        return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2))
+    }
+
+    _compare(data, propertyName) {
+        return (object1, object2) => {
+            const value1 = object1[propertyName]
+            const value2 = object2[propertyName]
+            return value2 < value1
+        }
+    }
+
+    _validDistance(distance) {
+        const map = this._map
+        const resolution = map.getResolution()
+        const tolerance = 10
+        return distance / resolution > tolerance
+    }
+
+    _registerDrawToolEvents() {
+        const drawTool = this._drawTool
+        drawTool.on('drawstart', (e) => this._resetCoordsAndPoint(e), this)
+        drawTool.on('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
+        drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
+        drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry), this)
+    }
+
+    _resetCoordsAndPoint(e) {
+        this._resetCoordinates(e.target._geometry)
+        this._resetClickPoint(e.target._clickCoords)
+    }
+
+    _resetCoordinates(geometry) {
+        if (this.snapPoint) {
+        }
+    }
+
+    _resetClickPoint(clickCoords) {
+        if (this.snapPoint) {
+            const { x, y } = this.snapPoint
+            const { length } = clickCoords
+            clickCoords[length - 1].x = x
+            clickCoords[length - 1].y = y
+        }
     }
 }
 
