@@ -7,13 +7,14 @@ export class SnapEndPoint extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
+        this._distance = 10
     }
 
     setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
             this.snaplayer = layer
-            this._addTo(layer.map)
-            this.snaplayer.on('addgeo', () => this._compositGeometries(), this)
+            this._addToMap(layer.map)
+            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
             this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this._mousemoveLayer.bringToFront()
             this.bindDrawTool(layer.map._map_tool)
@@ -32,7 +33,7 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     enable() {
-        this._compositGeometries()
+        this._updateGeosSet()
         this._registerMapEvents()
         this._registerDrawToolEvents()
         this._mousemoveLayer.show()
@@ -67,7 +68,7 @@ export class SnapEndPoint extends maptalks.Class {
         delete this._mousemoveLayer
     }
 
-    _addTo(map) {
+    _addToMap(map) {
         const layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_snapendpoint`
         this._mousemoveLayer = new maptalks.VectorLayer(layerName).addTo(map)
         this._map = map
@@ -75,7 +76,7 @@ export class SnapEndPoint extends maptalks.Class {
         return this
     }
 
-    _compositGeometries() {
+    _updateGeosSet() {
         const geometries = this.snaplayer.getGeometries()
         let geos = []
         geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
@@ -112,7 +113,6 @@ export class SnapEndPoint extends maptalks.Class {
     _registerMapEvents() {
         if (!this._mousemove) {
             const map = this._map
-            this._needFindGeometry = true
             this._mousemove = (e) => this._mousemoveEvents(e)
             this._mousedown = () => (this._needFindGeometry = false)
             this._mouseup = () => (this._needFindGeometry = true)
@@ -124,7 +124,7 @@ export class SnapEndPoint extends maptalks.Class {
 
     _mousemoveEvents(event) {
         const { coordinate } = event
-        this.mousePoint = coordinate
+        this._mousePoint = coordinate
 
         const hasMarler = !!this._marker
         if (hasMarler) this._marker.setCoordinates(coordinate)
@@ -163,24 +163,24 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _createInspectExtent(coordinate) {
-        const tolerance = 10
+        const distance = this._distance
         const map = this._map
         const zoom = map.getZoom()
         const { x, y } = map.coordinateToPoint(coordinate, zoom)
         const lefttop = map.pointToCoordinate(
-            new maptalks.Point([x - tolerance, y - tolerance]),
+            new maptalks.Point([x - distance, y - distance]),
             zoom
         )
         const righttop = map.pointToCoordinate(
-            new maptalks.Point([x + tolerance, y - tolerance]),
+            new maptalks.Point([x + distance, y - distance]),
             zoom
         )
         const leftbottom = map.pointToCoordinate(
-            new maptalks.Point([x - tolerance, y + tolerance]),
+            new maptalks.Point([x - distance, y + distance]),
             zoom
         )
         const rightbottom = map.pointToCoordinate(
-            new maptalks.Point([x + tolerance, y + tolerance]),
+            new maptalks.Point([x + distance, y + distance]),
             zoom
         )
         return {
@@ -201,11 +201,8 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _getSnapPoint(availGeometries) {
-        const { distance, geoObject } = this._findNearestGeometries(availGeometries.features)
-
-        if (this._validDistance(distance)) return null
-
-        const { type, coordinates } = geoObject.geometry
+        const { geoObject } = this._findNearestGeometries(availGeometries.features)
+        const { coordinates } = geoObject.geometry
         const snapPoint = {
             x: coordinates[0],
             y: coordinates[1]
@@ -232,7 +229,7 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _distToPoint(feature) {
-        const { x, y } = this.mousePoint
+        const { x, y } = this._mousePoint
         const from = [x, y]
         const to = feature.geometry.coordinates
         return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2))
@@ -244,13 +241,6 @@ export class SnapEndPoint extends maptalks.Class {
             const value2 = object2[propertyName]
             return value2 < value1
         }
-    }
-
-    _validDistance(distance) {
-        const map = this._map
-        const resolution = map.getResolution()
-        const tolerance = 10
-        return distance / resolution > tolerance
     }
 
     _registerDrawToolEvents() {
@@ -268,6 +258,13 @@ export class SnapEndPoint extends maptalks.Class {
 
     _resetCoordinates(geometry) {
         if (this.snapPoint) {
+            const { x, y } = this.snapPoint
+            const coords = geometry.getCoordinates()
+            const { length } = coords
+            coords[length - 1].x = x
+            coords[length - 1].y = y
+            geometry.setCoordinates(coords)
+            return geometry
         }
     }
 

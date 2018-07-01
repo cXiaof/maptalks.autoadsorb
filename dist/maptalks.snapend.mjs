@@ -2830,6 +2830,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
         _this.tree = geojsonRbush_1();
+        _this._distance = 10;
         return _this;
     }
 
@@ -2838,9 +2839,9 @@ var SnapEndPoint = function (_maptalks$Class) {
 
         if (layer instanceof VectorLayer) {
             this.snaplayer = layer;
-            this._addTo(layer.map);
+            this._addToMap(layer.map);
             this.snaplayer.on('addgeo', function () {
-                return _this2._compositGeometries();
+                return _this2._updateGeosSet();
             }, this);
             this.snaplayer.on('clear', function () {
                 return _this2._resetGeosSet();
@@ -2870,7 +2871,7 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype.enable = function enable() {
-        this._compositGeometries();
+        this._updateGeosSet();
         this._registerMapEvents();
         this._registerDrawToolEvents();
         this._mousemoveLayer.show();
@@ -2915,7 +2916,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         delete this._mousemoveLayer;
     };
 
-    SnapEndPoint.prototype._addTo = function _addTo(map) {
+    SnapEndPoint.prototype._addToMap = function _addToMap(map) {
         var layerName = INTERNAL_LAYER_PREFIX + '_snapendpoint';
         this._mousemoveLayer = new VectorLayer(layerName).addTo(map);
         this._map = map;
@@ -2923,7 +2924,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         return this;
     };
 
-    SnapEndPoint.prototype._compositGeometries = function _compositGeometries() {
+    SnapEndPoint.prototype._updateGeosSet = function _updateGeosSet() {
         var _this5 = this;
 
         var geometries = this.snaplayer.getGeometries();
@@ -2969,7 +2970,6 @@ var SnapEndPoint = function (_maptalks$Class) {
 
         if (!this._mousemove) {
             var map = this._map;
-            this._needFindGeometry = true;
             this._mousemove = function (e) {
                 return _this7._mousemoveEvents(e);
             };
@@ -2988,7 +2988,7 @@ var SnapEndPoint = function (_maptalks$Class) {
     SnapEndPoint.prototype._mousemoveEvents = function _mousemoveEvents(event) {
         var coordinate = event.coordinate;
 
-        this.mousePoint = coordinate;
+        this._mousePoint = coordinate;
 
         var hasMarler = !!this._marker;
         if (hasMarler) this._marker.setCoordinates(coordinate);
@@ -3028,7 +3028,7 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
-        var tolerance = 10;
+        var distance = this._distance;
         var map = this._map;
         var zoom = map.getZoom();
 
@@ -3036,10 +3036,10 @@ var SnapEndPoint = function (_maptalks$Class) {
             x = _map$coordinateToPoin.x,
             y = _map$coordinateToPoin.y;
 
-        var lefttop = map.pointToCoordinate(new Point([x - tolerance, y - tolerance]), zoom);
-        var righttop = map.pointToCoordinate(new Point([x + tolerance, y - tolerance]), zoom);
-        var leftbottom = map.pointToCoordinate(new Point([x - tolerance, y + tolerance]), zoom);
-        var rightbottom = map.pointToCoordinate(new Point([x + tolerance, y + tolerance]), zoom);
+        var lefttop = map.pointToCoordinate(new Point([x - distance, y - distance]), zoom);
+        var righttop = map.pointToCoordinate(new Point([x + distance, y - distance]), zoom);
+        var leftbottom = map.pointToCoordinate(new Point([x - distance, y + distance]), zoom);
+        var rightbottom = map.pointToCoordinate(new Point([x + distance, y + distance]), zoom);
         return {
             type: 'Feature',
             properties: {},
@@ -3052,14 +3052,9 @@ var SnapEndPoint = function (_maptalks$Class) {
 
     SnapEndPoint.prototype._getSnapPoint = function _getSnapPoint(availGeometries) {
         var _findNearestGeometrie = this._findNearestGeometries(availGeometries.features),
-            distance = _findNearestGeometrie.distance,
             geoObject = _findNearestGeometrie.geoObject;
 
-        if (this._validDistance(distance)) return null;
-
-        var _geoObject$geometry = geoObject.geometry,
-            type = _geoObject$geometry.type,
-            coordinates = _geoObject$geometry.coordinates;
+        var coordinates = geoObject.geometry.coordinates;
 
         var snapPoint = {
             x: coordinates[0],
@@ -3089,7 +3084,7 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._distToPoint = function _distToPoint(feature) {
-        var _mousePoint = this.mousePoint,
+        var _mousePoint = this._mousePoint,
             x = _mousePoint.x,
             y = _mousePoint.y;
 
@@ -3104,13 +3099,6 @@ var SnapEndPoint = function (_maptalks$Class) {
             var value2 = object2[propertyName];
             return value2 < value1;
         };
-    };
-
-    SnapEndPoint.prototype._validDistance = function _validDistance(distance) {
-        var map = this._map;
-        var resolution = map.getResolution();
-        var tolerance = 10;
-        return distance / resolution > tolerance;
     };
 
     SnapEndPoint.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
@@ -3137,14 +3125,26 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
-        if (this.snapPoint) {}
-    };
-
-    SnapEndPoint.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
         if (this.snapPoint) {
             var _snapPoint2 = this.snapPoint,
                 x = _snapPoint2.x,
                 y = _snapPoint2.y;
+
+            var coords = geometry.getCoordinates();
+            var length = coords.length;
+
+            coords[length - 1].x = x;
+            coords[length - 1].y = y;
+            geometry.setCoordinates(coords);
+            return geometry;
+        }
+    };
+
+    SnapEndPoint.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
+        if (this.snapPoint) {
+            var _snapPoint3 = this.snapPoint,
+                x = _snapPoint3.x,
+                y = _snapPoint3.y;
             var length = clickCoords.length;
 
             clickCoords[length - 1].x = x;
