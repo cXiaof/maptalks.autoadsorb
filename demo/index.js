@@ -12,7 +12,7 @@ const map = new maptalks.Map('map', {
 
 const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
-const drawTool = new maptalks.DrawTool({ mode: 'Polygon' }).addTo(map).disable()
+const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
 const snap = new maptalks.SnapEndPoint().setLayer(layerSketch)
 
@@ -21,11 +21,23 @@ drawTool.on('drawend', (param) => {
     geometry.addTo(layerSketch)
 })
 
+const modes = [
+    'Point',
+    'LineString',
+    'Polygon',
+    'Circle',
+    'Ellipse',
+    'Rectangle',
+    'FreeHandLineString',
+    'FreeHandPolygon'
+]
+let children = []
+modes.map((value) => children.push({ item: value, click: () => drawTool.setMode(value).enable() }))
 const toolbar = new maptalks.control.Toolbar({
     items: [
         {
             item: 'Draw',
-            click: () => drawTool.enable()
+            children
         },
         {
             item: 'Stop',

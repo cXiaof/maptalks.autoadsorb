@@ -261,8 +261,10 @@ export class SnapEndPoint extends maptalks.Class {
             const { x, y } = this.snapPoint
             const coords = geometry.getCoordinates()
             const { length } = coords
-            coords[length - 1].x = x
-            coords[length - 1].y = y
+            if (length) {
+                coords[length - 1].x = x
+                coords[length - 1].y = y
+            }
             geometry.setCoordinates(coords)
             return geometry
         }

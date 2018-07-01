@@ -3137,8 +3137,10 @@ var SnapEndPoint = function (_maptalks$Class) {
             var coords = geometry.getCoordinates();
             var length = coords.length;
 
-            coords[length - 1].x = x;
-            coords[length - 1].y = y;
+            if (length) {
+                coords[length - 1].x = x;
+                coords[length - 1].y = y;
+            }
             geometry.setCoordinates(coords);
             return geometry;
         }
