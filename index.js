@@ -1,5 +1,8 @@
 import * as maptalks from 'maptalks'
 import rbush from 'geojson-rbush'
+import isEqual from 'lodash/isEqual'
+import differenceWith from 'lodash/differenceWith'
+import findIndex from 'lodash/findIndex'
 
 const options = {}
 
@@ -8,16 +11,18 @@ export class SnapEndPoint extends maptalks.Class {
         super(options)
         this.tree = rbush()
         this._distance = 10
+        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_snapendpoint`
     }
 
     setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
+            const map = layer.map
+            this._checkOnlyOne(map)
             this.snaplayer = layer
-            this.addTo(layer.map)
+            this.addTo(map)
             this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
             this.snaplayer.on('clear', () => this._resetGeosSet(), this)
-            this._mousemoveLayer.bringToFront()
-            this.bindDrawTool(layer.map._map_tool)
+            this.bindDrawTool(map._map_tool)
         }
         return this
     }
@@ -32,41 +37,68 @@ export class SnapEndPoint extends maptalks.Class {
         }
     }
 
+    setGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            const layer = geometry._layer
+            const map = layer.map
+            this._checkOnlyOne(map)
+            this.snaplayer = layer
+            this.addTo(map)
+            this.bindGeometry(geometry)
+        }
+        return this
+    }
+
+    bindGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            this.geometry = geometry
+            this.geometryCoords = geometry.getCoordinates()
+            geometry.on('editstart', (e) => this.enable(), this)
+            geometry.on('editend', (e) => this.disable(), this)
+            geometry.on('remove', (e) => this.remove(), this)
+        }
+    }
+
     enable() {
         this._updateGeosSet()
         this._registerMapEvents()
-        this._registerDrawToolEvents()
-        this._mousemoveLayer.show()
+        if (this.drawTool) this._registerDrawToolEvents()
+        if (this.geometry) this._registerGeometryEvents()
+        if (this._mousemoveLayer) this._mousemoveLayer.show()
         return this
     }
 
     disable() {
         this._offMapEvents()
         this._offDrawToolEvents()
+        this._offGeometryEvents()
 
         delete this._mousemove
         delete this._mousedown
         delete this._mouseup
-        this._mousemoveLayer.hide()
+        if (this._mousemoveLayer) this._mousemoveLayer.hide()
         this._resetGeosSet()
         return this
     }
 
     remove() {
         this.disable()
-        this._marker.remove()
-        this._mousemoveLayer.remove()
-        delete this.drawTool
-        delete this._marker
+        const layer = map.getLayer(this._layerName)
+        if (layer) layer.remove()
         delete this._mousemoveLayer
     }
 
     addTo(map) {
-        const layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_snapendpoint`
-        this._mousemoveLayer = new maptalks.VectorLayer(layerName).addTo(map)
+        this._mousemoveLayer = new maptalks.VectorLayer(this._layerName).addTo(map)
+        this._mousemoveLayer.bringToFront()
         this._map = map
         this._resetGeosSet()
         return this
+    }
+
+    _checkOnlyOne(map) {
+        const _layer = map.getLayer(this._layerName)
+        if (_layer) this.remove()
     }
 
     _updateGeosSet() {
@@ -80,6 +112,11 @@ export class SnapEndPoint extends maptalks.Class {
         const type = geo.getType()
         let coordinates =
             type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates()
+        if (this.geometry) {
+            const coordsNow = geo.toGeoJSON().geometry.coordinates
+            const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
+            if (isEqual(coordsNow, coordsThis)) return []
+        }
         let geos = []
         const isPolygon = coordinates[0] instanceof Array
         if (isPolygon) coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
@@ -107,8 +144,14 @@ export class SnapEndPoint extends maptalks.Class {
         if (!this._mousemove) {
             const map = this._map
             this._mousemove = (e) => this._mousemoveEvents(e)
-            this._mousedown = () => (this._needFindGeometry = false)
-            this._mouseup = () => (this._needFindGeometry = true)
+            this._mousedown = () => {
+                if (this.drawTool) this._needFindGeometry = false
+                if (this.geometry) this._needFindGeometry = true
+            }
+            this._mouseup = () => {
+                if (this.drawTool) this._needFindGeometry = true
+                if (this.geometry) this._needFindGeometry = false
+            }
             map.on('mousemove touchstart', this._mousemove, this)
             map.on('mousedown', this._mousedown, this)
             map.on('mouseup', this._mouseup, this)
@@ -117,13 +160,14 @@ export class SnapEndPoint extends maptalks.Class {
 
     _offMapEvents() {
         const map = this._map
-        map.off('mousemove touchstart', this._mousemove, this)
-        map.off('mousedown', this._mousedown, this)
-        map.off('mouseup', this._mouseup, this)
+        if (this._mousemove) map.off('mousemove touchstart', this._mousemove, this)
+        if (this._mousedown) map.off('mousedown', this._mousedown, this)
+        if (this._mouseup) map.off('mouseup', this._mouseup, this)
     }
 
     _mousemoveEvents(event) {
         const { coordinate } = event
+        this._needDeal = true
         this._mousePoint = coordinate
 
         const hasMarler = !!this._marker
@@ -261,9 +305,45 @@ export class SnapEndPoint extends maptalks.Class {
         }
     }
 
+    _registerGeometryEvents() {
+        const geometry = this.geometry
+        geometry.on('shapechange', (e) => this._getEditCoordinates(e.target), this)
+    }
+
+    _offGeometryEvents() {
+        if (this.geometry) {
+            const geometry = this.geometry
+            geometry.off('shapechange', (e) => this._getEditCoordinates(e.target), this)
+        }
+    }
+
     _resetCoordsAndPoint(e) {
         this._resetCoordinates(e.target._geometry)
         this._resetClickPoint(e.target._clickCoords)
+    }
+
+    _getEditCoordinates(geometry) {
+        if (this.snapPoint && this._needDeal) {
+            const { x, y } = this.snapPoint
+            const coordsOld = this.geometryCoords
+            const coords = geometry.getCoordinates()
+
+            const coordsNew = differenceWith(coords[0], coordsOld[0], isEqual)[0]
+            const coordsIndex = findIndex(coords[0], coordsNew)
+
+            const moreVertux = coords[0].length === coordsOld[0].length
+            if (moreVertux) {
+                coords[0][coordsIndex].x = x
+                coords[0][coordsIndex].y = y
+            }
+            if (!moreVertux) {
+                coords[0].splice(coordsIndex, 0, new maptalks.Coordinate(x, y))
+            }
+            this._needDeal = false
+            this.geometryCoords = coords
+            geometry.setCoordinates(this.geometryCoords)
+            return geometry
+        }
     }
 
     _resetCoordinates(geometry) {
