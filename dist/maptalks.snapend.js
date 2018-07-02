@@ -2842,12 +2842,12 @@ var SnapEndPoint = function (_maptalks$Class) {
         var _this2 = this;
 
         if (layer instanceof maptalks.VectorLayer) {
-            this._snaplayer = layer;
-            this._addToMap(layer.map);
-            this._snaplayer.on('addgeo', function () {
+            this.snaplayer = layer;
+            this.addTo(layer.map);
+            this.snaplayer.on('addgeo', function () {
                 return _this2._updateGeosSet();
             }, this);
-            this._snaplayer.on('clear', function () {
+            this.snaplayer.on('clear', function () {
                 return _this2._resetGeosSet();
             }, this);
             this._mousemoveLayer.bringToFront();
@@ -2860,7 +2860,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         var _this3 = this;
 
         if (drawTool instanceof maptalks.DrawTool) {
-            this._drawTool = drawTool;
+            this.drawTool = drawTool;
             drawTool.on('enable', function (e) {
                 return _this3.enable();
             }, this);
@@ -2883,26 +2883,8 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype.disable = function disable() {
-        var _this4 = this;
-
-        var map = this._map;
-        map.off('mousemove touchstart', this._mousemove, this);
-        map.off('mousedown', this._mousedown, this);
-        map.off('mouseup', this._mouseup, this);
-
-        var drawTool = this._drawTool;
-        drawTool.off('drawstart', function (e) {
-            return _this4._resetCoordsAndPoint(e);
-        }, this);
-        drawTool.off('mousemove', function (e) {
-            return _this4._resetCoordinates(e.target._geometry);
-        }, this);
-        drawTool.off('drawvertex', function (e) {
-            return _this4._resetCoordsAndPoint(e);
-        }, this);
-        drawTool.off('drawend', function (e) {
-            return _this4._resetCoordinates(e.geometry);
-        }, this);
+        this._offMapEvents();
+        this._offDrawToolEvents();
 
         delete this._mousemove;
         delete this._mousedown;
@@ -2916,12 +2898,12 @@ var SnapEndPoint = function (_maptalks$Class) {
         this.disable();
         this._marker.remove();
         this._mousemoveLayer.remove();
-        delete this._drawTool;
+        delete this.drawTool;
         delete this._marker;
         delete this._mousemoveLayer;
     };
 
-    SnapEndPoint.prototype._addToMap = function _addToMap(map) {
+    SnapEndPoint.prototype.addTo = function addTo(map) {
         var layerName = maptalks.INTERNAL_LAYER_PREFIX + '_snapendpoint';
         this._mousemoveLayer = new maptalks.VectorLayer(layerName).addTo(map);
         this._map = map;
@@ -2930,25 +2912,25 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._updateGeosSet = function _updateGeosSet() {
-        var _this5 = this;
+        var _this4 = this;
 
-        var geometries = this._snaplayer.getGeometries();
+        var geometries = this.snaplayer.getGeometries();
         var geos = [];
         geometries.forEach(function (geo) {
-            return geos.push.apply(geos, _this5._parserToPoints(geo));
+            return geos.push.apply(geos, _this4._parserToPoints(geo));
         });
         this._geosSet = geos;
     };
 
     SnapEndPoint.prototype._parserToPoints = function _parserToPoints(geo) {
-        var _this6 = this;
+        var _this5 = this;
 
         var type = geo.getType();
         var coordinates = type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates();
         var geos = [];
         var isPolygon = coordinates[0] instanceof Array;
         if (isPolygon) coordinates.forEach(function (coords) {
-            return geos.push.apply(geos, _this6._createMarkers(coords));
+            return geos.push.apply(geos, _this5._createMarkers(coords));
         });
         if (!isPolygon) {
             var isPoint = coordinates instanceof Array;
@@ -2971,23 +2953,30 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._registerMapEvents = function _registerMapEvents() {
-        var _this7 = this;
+        var _this6 = this;
 
         if (!this._mousemove) {
             var map = this._map;
             this._mousemove = function (e) {
-                return _this7._mousemoveEvents(e);
+                return _this6._mousemoveEvents(e);
             };
             this._mousedown = function () {
-                return _this7._needFindGeometry = false;
+                return _this6._needFindGeometry = false;
             };
             this._mouseup = function () {
-                return _this7._needFindGeometry = true;
+                return _this6._needFindGeometry = true;
             };
             map.on('mousemove touchstart', this._mousemove, this);
             map.on('mousedown', this._mousedown, this);
             map.on('mouseup', this._mouseup, this);
         }
+    };
+
+    SnapEndPoint.prototype._offMapEvents = function _offMapEvents() {
+        var map = this._map;
+        map.off('mousemove touchstart', this._mousemove, this);
+        map.off('mousedown', this._mousedown, this);
+        map.off('mouseup', this._mouseup, this);
     };
 
     SnapEndPoint.prototype._mousemoveEvents = function _mousemoveEvents(event) {
@@ -3075,11 +3064,11 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._setDistance = function _setDistance(features) {
-        var _this8 = this;
+        var _this7 = this;
 
         var geoObjects = [];
         features.forEach(function (feature) {
-            var distance = _this8._distToPoint(feature);
+            var distance = _this7._distToPoint(feature);
             geoObjects.push({
                 geoObject: feature,
                 distance: distance
@@ -3107,21 +3096,41 @@ var SnapEndPoint = function (_maptalks$Class) {
     };
 
     SnapEndPoint.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
-        var _this9 = this;
+        var _this8 = this;
 
-        var drawTool = this._drawTool;
+        var drawTool = this.drawTool;
         drawTool.on('drawstart', function (e) {
-            return _this9._resetCoordsAndPoint(e);
+            return _this8._resetCoordsAndPoint(e);
         }, this);
         drawTool.on('mousemove', function (e) {
-            return _this9._resetCoordinates(e.target._geometry);
+            return _this8._resetCoordinates(e.target._geometry);
         }, this);
         drawTool.on('drawvertex', function (e) {
-            return _this9._resetCoordsAndPoint(e);
+            return _this8._resetCoordsAndPoint(e);
         }, this);
         drawTool.on('drawend', function (e) {
-            return _this9._resetCoordinates(e.geometry);
+            return _this8._resetCoordinates(e.geometry);
         }, this);
+    };
+
+    SnapEndPoint.prototype._offDrawToolEvents = function _offDrawToolEvents() {
+        var _this9 = this;
+
+        if (this.drawTool) {
+            var drawTool = this.drawTool;
+            drawTool.off('drawstart', function (e) {
+                return _this9._resetCoordsAndPoint(e);
+            }, this);
+            drawTool.off('mousemove', function (e) {
+                return _this9._resetCoordinates(e.target._geometry);
+            }, this);
+            drawTool.off('drawvertex', function (e) {
+                return _this9._resetCoordsAndPoint(e);
+            }, this);
+            drawTool.off('drawend', function (e) {
+                return _this9._resetCoordinates(e.geometry);
+            }, this);
+        }
     };
 
     SnapEndPoint.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {

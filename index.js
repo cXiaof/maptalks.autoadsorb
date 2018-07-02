@@ -12,10 +12,10 @@ export class SnapEndPoint extends maptalks.Class {
 
     setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
-            this._snaplayer = layer
-            this._addToMap(layer.map)
-            this._snaplayer.on('addgeo', () => this._updateGeosSet(), this)
-            this._snaplayer.on('clear', () => this._resetGeosSet(), this)
+            this.snaplayer = layer
+            this.addTo(layer.map)
+            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
+            this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this._mousemoveLayer.bringToFront()
             this.bindDrawTool(layer.map._map_tool)
         }
@@ -24,7 +24,7 @@ export class SnapEndPoint extends maptalks.Class {
 
     bindDrawTool(drawTool) {
         if (drawTool instanceof maptalks.DrawTool) {
-            this._drawTool = drawTool
+            this.drawTool = drawTool
             drawTool.on('enable', (e) => this.enable(), this)
             drawTool.on('disable', (e) => this.disable(), this)
             drawTool.on('remove', (e) => this.remove(), this)
@@ -41,16 +41,8 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     disable() {
-        const map = this._map
-        map.off('mousemove touchstart', this._mousemove, this)
-        map.off('mousedown', this._mousedown, this)
-        map.off('mouseup', this._mouseup, this)
-
-        const drawTool = this._drawTool
-        drawTool.off('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.off('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
-        drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.off('drawend', (e) => this._resetCoordinates(e.geometry), this)
+        this._offMapEvents()
+        this._offDrawToolEvents()
 
         delete this._mousemove
         delete this._mousedown
@@ -64,12 +56,12 @@ export class SnapEndPoint extends maptalks.Class {
         this.disable()
         this._marker.remove()
         this._mousemoveLayer.remove()
-        delete this._drawTool
+        delete this.drawTool
         delete this._marker
         delete this._mousemoveLayer
     }
 
-    _addToMap(map) {
+    addTo(map) {
         const layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_snapendpoint`
         this._mousemoveLayer = new maptalks.VectorLayer(layerName).addTo(map)
         this._map = map
@@ -78,7 +70,7 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this._snaplayer.getGeometries()
+        const geometries = this.snaplayer.getGeometries()
         let geos = []
         geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
         this._geosSet = geos
@@ -121,6 +113,13 @@ export class SnapEndPoint extends maptalks.Class {
             map.on('mousedown', this._mousedown, this)
             map.on('mouseup', this._mouseup, this)
         }
+    }
+
+    _offMapEvents() {
+        const map = this._map
+        map.off('mousemove touchstart', this._mousemove, this)
+        map.off('mousedown', this._mousedown, this)
+        map.off('mouseup', this._mouseup, this)
     }
 
     _mousemoveEvents(event) {
@@ -245,11 +244,21 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _registerDrawToolEvents() {
-        const drawTool = this._drawTool
+        const drawTool = this.drawTool
         drawTool.on('drawstart', (e) => this._resetCoordsAndPoint(e), this)
         drawTool.on('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
         drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
         drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry), this)
+    }
+
+    _offDrawToolEvents() {
+        if (this.drawTool) {
+            const drawTool = this.drawTool
+            drawTool.off('drawstart', (e) => this._resetCoordsAndPoint(e), this)
+            drawTool.off('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
+            drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
+            drawTool.off('drawend', (e) => this._resetCoordinates(e.geometry), this)
+        }
     }
 
     _resetCoordsAndPoint(e) {
