@@ -6715,6 +6715,9 @@ var SnapEndPoint = function (_maptalks$Class) {
         geometry.on('shapechange', function (e) {
             return _this11._getEditCoordinates(e.target);
         }, this);
+        geometry.on('editrecord', function (e) {
+            return _this11._upGeoCoords(e.target.getCoordinates());
+        }, this);
     };
 
     SnapEndPoint.prototype._offGeometryEvents = function _offGeometryEvents() {
@@ -6724,6 +6727,9 @@ var SnapEndPoint = function (_maptalks$Class) {
             var geometry = this.geometry;
             geometry.off('shapechange', function (e) {
                 return _this12._getEditCoordinates(e.target);
+            }, this);
+            geometry.off('editrecord', function (e) {
+                return _this12._upGeoCoords(e.target.getCoordinates());
             }, this);
         }
     };
@@ -6749,15 +6755,26 @@ var SnapEndPoint = function (_maptalks$Class) {
             if (moreVertux) {
                 coords[0][coordsIndex].x = x;
                 coords[0][coordsIndex].y = y;
+                if (coordsIndex === 0) {
+                    coords[0][coords[0].length - 1].x = x;
+                    coords[0][coords[0].length - 1].y = y;
+                }
             }
             if (!moreVertux) {
                 coords[0].splice(coordsIndex, 0, new Coordinate(x, y));
             }
             this._needDeal = false;
-            this.geometryCoords = coords;
+            this._upGeoCoords(coords);
+            console.log(coordsIndex, coordsNew);
+            console.log(coords[0]);
+            console.log(this.geometryCoords[0]);
             geometry.setCoordinates(this.geometryCoords);
             return geometry;
         }
+    };
+
+    SnapEndPoint.prototype._upGeoCoords = function _upGeoCoords(coords) {
+        this.geometryCoords = coords;
     };
 
     SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
