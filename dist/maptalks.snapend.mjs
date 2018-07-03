@@ -3,7 +3,7 @@
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
-import { Class, Coordinate, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, Marker, Point, VectorLayer } from 'maptalks';
+import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, Marker, Point, VectorLayer } from 'maptalks';
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -6751,23 +6751,15 @@ var SnapEndPoint = function (_maptalks$Class) {
             var coordsNew = differenceWith_1(coords[0], coordsOld[0], isEqual_1)[0];
             var coordsIndex = findIndex_1(coords[0], coordsNew);
 
-            var moreVertux = coords[0].length === coordsOld[0].length;
-            if (moreVertux) {
-                coords[0][coordsIndex].x = x;
-                coords[0][coordsIndex].y = y;
-                if (coordsIndex === 0) {
-                    coords[0][coords[0].length - 1].x = x;
-                    coords[0][coords[0].length - 1].y = y;
-                }
+            coords[0][coordsIndex].x = x;
+            coords[0][coordsIndex].y = y;
+            if (coordsIndex === 0) {
+                coords[0][coords[0].length - 1].x = x;
+                coords[0][coords[0].length - 1].y = y;
             }
-            if (!moreVertux) {
-                coords[0].splice(coordsIndex, 0, new Coordinate(x, y));
-            }
+
             this._needDeal = false;
             this._upGeoCoords(coords);
-            console.log(coordsIndex, coordsNew);
-            console.log(coords[0]);
-            console.log(this.geometryCoords[0]);
             geometry.setCoordinates(this.geometryCoords);
             return geometry;
         }
