@@ -56,6 +56,7 @@ export class SnapEndPoint extends maptalks.Class {
             geometry.on('editstart', (e) => this.enable(), this)
             geometry.on('editend', (e) => this.disable(), this)
             geometry.on('remove', (e) => this.remove(), this)
+            geometry.startEdit().endEdit()
         }
     }
 

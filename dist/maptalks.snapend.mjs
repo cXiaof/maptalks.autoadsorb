@@ -6433,6 +6433,7 @@ var SnapEndPoint = function (_maptalks$Class) {
             geometry.on('remove', function (e) {
                 return _this4.remove();
             }, this);
+            geometry.startEdit().endEdit();
         }
     };
 
