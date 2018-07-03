@@ -3,6 +3,7 @@ import rbush from 'geojson-rbush'
 import isEqual from 'lodash/isEqual'
 import differenceWith from 'lodash/differenceWith'
 import findIndex from 'lodash/findIndex'
+import includes from 'lodash/includes'
 
 const options = {}
 
@@ -17,9 +18,8 @@ export class SnapEndPoint extends maptalks.Class {
     setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
             const map = layer.map
-            this._checkOnlyOne(map)
+            this._addTo(map)
             this.snaplayer = layer
-            this.addTo(map)
             this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
             this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this.bindDrawTool(map._map_tool)
@@ -41,9 +41,8 @@ export class SnapEndPoint extends maptalks.Class {
         if (geometry instanceof maptalks.Geometry) {
             const layer = geometry._layer
             const map = layer.map
-            this._checkOnlyOne(map)
+            this._addTo(map)
             this.snaplayer = layer
-            this.addTo(map)
             this.bindGeometry(geometry)
         }
         return this
@@ -89,17 +88,14 @@ export class SnapEndPoint extends maptalks.Class {
         delete this._mousemoveLayer
     }
 
-    addTo(map) {
+    _addTo(map) {
+        const _layer = map.getLayer(this._layerName)
+        if (_layer) this.remove()
         this._mousemoveLayer = new maptalks.VectorLayer(this._layerName).addTo(map)
         this._mousemoveLayer.bringToFront()
         this._map = map
         this._resetGeosSet()
         return this
-    }
-
-    _checkOnlyOne(map) {
-        const _layer = map.getLayer(this._layerName)
-        if (_layer) this.remove()
     }
 
     _updateGeosSet() {
@@ -119,11 +115,10 @@ export class SnapEndPoint extends maptalks.Class {
             if (isEqual(coordsNow, coordsThis)) return []
         }
         let geos = []
-        const isPolygon = coordinates[0] instanceof Array
-        if (isPolygon) coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
-        if (!isPolygon) {
-            const isPoint = coordinates instanceof Array
-            if (!isPoint) coordinates = [coordinates]
+        if (coordinates[0] instanceof Array)
+            coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
+        else {
+            if (!coordinates instanceof Array) coordinates = [coordinates]
             geos.push(...this._createMarkers(coordinates))
         }
         return geos
@@ -171,9 +166,8 @@ export class SnapEndPoint extends maptalks.Class {
         this._needDeal = true
         this._mousePoint = coordinate
 
-        const hasMarler = !!this._marker
-        if (hasMarler) this._marker.setCoordinates(coordinate)
-        if (!hasMarler)
+        if (this._marker) this._marker.setCoordinates(coordinate)
+        else
             this._marker = new maptalks.Marker(coordinate, {
                 symbol: {}
             }).addTo(this._mousemoveLayer)
@@ -212,64 +206,45 @@ export class SnapEndPoint extends maptalks.Class {
         const map = this._map
         const zoom = map.getZoom()
         const { x, y } = map.coordinateToPoint(coordinate, zoom)
-        const lefttop = map.pointToCoordinate(
-            new maptalks.Point([x - distance, y - distance]),
-            zoom
-        )
-        const righttop = map.pointToCoordinate(
-            new maptalks.Point([x + distance, y - distance]),
-            zoom
-        )
-        const leftbottom = map.pointToCoordinate(
-            new maptalks.Point([x - distance, y + distance]),
-            zoom
-        )
-        const rightbottom = map.pointToCoordinate(
-            new maptalks.Point([x + distance, y + distance]),
-            zoom
-        )
+        const lt = this._pointToCoordinateWithZoom([x - distance, y - distance], zoom)
+        const rt = this._pointToCoordinateWithZoom([x + distance, y - distance], zoom)
+        const rb = this._pointToCoordinateWithZoom([x + distance, y + distance], zoom)
+        const lb = this._pointToCoordinateWithZoom([x - distance, y + distance], zoom)
         return {
             type: 'Feature',
             properties: {},
             geometry: {
                 type: 'Polygon',
-                coordinates: [
-                    [
-                        [lefttop.x, lefttop.y],
-                        [righttop.x, righttop.y],
-                        [rightbottom.x, rightbottom.y],
-                        [leftbottom.x, leftbottom.y]
-                    ]
-                ]
+                coordinates: [[[lt.x, lt.y], [rt.x, rt.y], [rb.x, rb.y], [lb.x, lb.y]]]
             }
         }
     }
 
+    _pointToCoordinateWithZoom(point, zoom) {
+        const map = this._map
+        return map.pointToCoordinate(new maptalks.Point(point), zoom)
+    }
+
     _getSnapPoint(availGeometries) {
-        const { geoObject } = this._findNearestGeometries(availGeometries.features)
-        const { coordinates } = geoObject.geometry
-        const snapPoint = {
-            x: coordinates[0],
-            y: coordinates[1]
-        }
+        const { coordinates } = this._findNearestFeatures(availGeometries.features)
+        const snapPoint = { x: coordinates[0], y: coordinates[1] }
         return snapPoint
     }
 
-    _findNearestGeometries(features) {
+    _findNearestFeatures(features) {
         let geoObjects = this._setDistance(features)
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
-        return geoObjects[0]
+        return geoObjects[0].geoObject.geometry
     }
 
     _setDistance(features) {
         const geoObjects = []
-        features.forEach((feature) => {
-            const distance = this._distToPoint(feature)
+        features.forEach((feature) =>
             geoObjects.push({
                 geoObject: feature,
-                distance
+                distance: this._distToPoint(feature)
             })
-        })
+        )
         return geoObjects
     }
 
@@ -325,33 +300,6 @@ export class SnapEndPoint extends maptalks.Class {
         this._resetClickPoint(e.target._clickCoords)
     }
 
-    _getEditCoordinates(geometry) {
-        if (this.snapPoint && this._needDeal) {
-            const { x, y } = this.snapPoint
-            const coordsOld = this.geometryCoords
-            const coords = geometry.getCoordinates()
-
-            const coordsNew = differenceWith(coords[0], coordsOld[0], isEqual)[0]
-            const coordsIndex = findIndex(coords[0], coordsNew)
-
-            coords[0][coordsIndex].x = x
-            coords[0][coordsIndex].y = y
-            if (coordsIndex === 0) {
-                coords[0][coords[0].length - 1].x = x
-                coords[0][coords[0].length - 1].y = y
-            }
-
-            this._needDeal = false
-            this._upGeoCoords(coords)
-            geometry.setCoordinates(this.geometryCoords)
-            return geometry
-        }
-    }
-
-    _upGeoCoords(coords) {
-        this.geometryCoords = coords
-    }
-
     _resetCoordinates(geometry) {
         if (this.snapPoint) {
             const { x, y } = this.snapPoint
@@ -373,6 +321,37 @@ export class SnapEndPoint extends maptalks.Class {
             clickCoords[length - 1].x = x
             clickCoords[length - 1].y = y
         }
+    }
+
+    _getEditCoordinates(geometry) {
+        if (this.snapPoint && this._needDeal) {
+            const { x, y } = this.snapPoint
+            const coordsOld0 = this.geometryCoords[0]
+            if (!includes(coordsOld0, this.snapPoint)) {
+                const coords = geometry.getCoordinates()
+                const coords0 = coords[0]
+                const { length } = coords0
+
+                const coordsNew = differenceWith(coords0, coordsOld0, isEqual)[0]
+                const coordsIndex = findIndex(coords0, coordsNew)
+
+                coords[0][coordsIndex].x = x
+                coords[0][coordsIndex].y = y
+                if (coordsIndex === 0) {
+                    coords[0][length - 1].x = x
+                    coords[0][length - 1].y = y
+                }
+
+                this._needDeal = false
+                this._upGeoCoords(coords)
+                geometry.setCoordinates(this.geometryCoords)
+            }
+            return geometry
+        }
+    }
+
+    _upGeoCoords(coords) {
+        this.geometryCoords = coords
     }
 }
 

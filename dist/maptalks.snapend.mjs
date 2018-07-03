@@ -6345,6 +6345,128 @@ function findIndex(array, predicate, fromIndex) {
 
 var findIndex_1 = findIndex;
 
+/** `Object#toString` result references. */
+var stringTag$2 = '[object String]';
+
+/**
+ * Checks if `value` is classified as a `String` primitive or object.
+ *
+ * @static
+ * @since 0.1.0
+ * @memberOf _
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a string, else `false`.
+ * @example
+ *
+ * _.isString('abc');
+ * // => true
+ *
+ * _.isString(1);
+ * // => false
+ */
+function isString(value) {
+  return typeof value == 'string' || !isArray_1(value) && isObjectLike_1(value) && _baseGetTag(value) == stringTag$2;
+}
+
+var isString_1 = isString;
+
+/**
+ * The base implementation of `_.values` and `_.valuesIn` which creates an
+ * array of `object` property values corresponding to the property names
+ * of `props`.
+ *
+ * @private
+ * @param {Object} object The object to query.
+ * @param {Array} props The property names to get values for.
+ * @returns {Object} Returns the array of property values.
+ */
+function baseValues(object, props) {
+  return _arrayMap(props, function (key) {
+    return object[key];
+  });
+}
+
+var _baseValues = baseValues;
+
+/**
+ * Creates an array of the own enumerable string keyed property values of `object`.
+ *
+ * **Note:** Non-object values are coerced to objects.
+ *
+ * @static
+ * @since 0.1.0
+ * @memberOf _
+ * @category Object
+ * @param {Object} object The object to query.
+ * @returns {Array} Returns the array of property values.
+ * @example
+ *
+ * function Foo() {
+ *   this.a = 1;
+ *   this.b = 2;
+ * }
+ *
+ * Foo.prototype.c = 3;
+ *
+ * _.values(new Foo);
+ * // => [1, 2] (iteration order is not guaranteed)
+ *
+ * _.values('hi');
+ * // => ['h', 'i']
+ */
+function values(object) {
+  return object == null ? [] : _baseValues(object, keys_1(object));
+}
+
+var values_1 = values;
+
+/* Built-in method references for those with the same name as other `lodash` methods. */
+var nativeMax$2 = Math.max;
+
+/**
+ * Checks if `value` is in `collection`. If `collection` is a string, it's
+ * checked for a substring of `value`, otherwise
+ * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+ * is used for equality comparisons. If `fromIndex` is negative, it's used as
+ * the offset from the end of `collection`.
+ *
+ * @static
+ * @memberOf _
+ * @since 0.1.0
+ * @category Collection
+ * @param {Array|Object|string} collection The collection to inspect.
+ * @param {*} value The value to search for.
+ * @param {number} [fromIndex=0] The index to search from.
+ * @param- {Object} [guard] Enables use as an iteratee for methods like `_.reduce`.
+ * @returns {boolean} Returns `true` if `value` is found, else `false`.
+ * @example
+ *
+ * _.includes([1, 2, 3], 1);
+ * // => true
+ *
+ * _.includes([1, 2, 3], 1, 2);
+ * // => false
+ *
+ * _.includes({ 'a': 1, 'b': 2 }, 1);
+ * // => true
+ *
+ * _.includes('abcd', 'bc');
+ * // => true
+ */
+function includes(collection, value, fromIndex, guard) {
+  collection = isArrayLike_1(collection) ? collection : values_1(collection);
+  fromIndex = fromIndex && !guard ? toInteger_1(fromIndex) : 0;
+
+  var length = collection.length;
+  if (fromIndex < 0) {
+    fromIndex = nativeMax$2(length + fromIndex, 0);
+  }
+  return isString_1(collection) ? fromIndex <= length && collection.indexOf(value, fromIndex) > -1 : !!length && _baseIndexOf(collection, value, fromIndex) > -1;
+}
+
+var includes_1 = includes;
+
 function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -6374,9 +6496,8 @@ var SnapEndPoint = function (_maptalks$Class) {
 
         if (layer instanceof VectorLayer) {
             var _map = layer.map;
-            this._checkOnlyOne(_map);
+            this._addTo(_map);
             this.snaplayer = layer;
-            this.addTo(_map);
             this.snaplayer.on('addgeo', function () {
                 return _this2._updateGeosSet();
             }, this);
@@ -6410,9 +6531,8 @@ var SnapEndPoint = function (_maptalks$Class) {
         if (geometry instanceof Geometry) {
             var layer = geometry._layer;
             var _map2 = layer.map;
-            this._checkOnlyOne(_map2);
+            this._addTo(_map2);
             this.snaplayer = layer;
-            this.addTo(_map2);
             this.bindGeometry(geometry);
         }
         return this;
@@ -6466,17 +6586,14 @@ var SnapEndPoint = function (_maptalks$Class) {
         delete this._mousemoveLayer;
     };
 
-    SnapEndPoint.prototype.addTo = function addTo(map) {
+    SnapEndPoint.prototype._addTo = function _addTo(map) {
+        var _layer = map.getLayer(this._layerName);
+        if (_layer) this.remove();
         this._mousemoveLayer = new VectorLayer(this._layerName).addTo(map);
         this._mousemoveLayer.bringToFront();
         this._map = map;
         this._resetGeosSet();
         return this;
-    };
-
-    SnapEndPoint.prototype._checkOnlyOne = function _checkOnlyOne(map) {
-        var _layer = map.getLayer(this._layerName);
-        if (_layer) this.remove();
     };
 
     SnapEndPoint.prototype._updateGeosSet = function _updateGeosSet() {
@@ -6501,13 +6618,10 @@ var SnapEndPoint = function (_maptalks$Class) {
             if (isEqual_1(coordsNow, coordsThis)) return [];
         }
         var geos = [];
-        var isPolygon = coordinates[0] instanceof Array;
-        if (isPolygon) coordinates.forEach(function (coords) {
+        if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
             return geos.push.apply(geos, _this6._createMarkers(coords));
-        });
-        if (!isPolygon) {
-            var isPoint = coordinates instanceof Array;
-            if (!isPoint) coordinates = [coordinates];
+        });else {
+            if (!coordinates instanceof Array) coordinates = [coordinates];
             geos.push.apply(geos, this._createMarkers(coordinates));
         }
         return geos;
@@ -6560,9 +6674,7 @@ var SnapEndPoint = function (_maptalks$Class) {
         this._needDeal = true;
         this._mousePoint = coordinate;
 
-        var hasMarler = !!this._marker;
-        if (hasMarler) this._marker.setCoordinates(coordinate);
-        if (!hasMarler) this._marker = new Marker(coordinate, {
+        if (this._marker) this._marker.setCoordinates(coordinate);else this._marker = new Marker(coordinate, {
             symbol: {}
         }).addTo(this._mousemoveLayer);
 
@@ -6606,37 +6718,37 @@ var SnapEndPoint = function (_maptalks$Class) {
             x = _map$coordinateToPoin.x,
             y = _map$coordinateToPoin.y;
 
-        var lefttop = map.pointToCoordinate(new Point([x - distance, y - distance]), zoom);
-        var righttop = map.pointToCoordinate(new Point([x + distance, y - distance]), zoom);
-        var leftbottom = map.pointToCoordinate(new Point([x - distance, y + distance]), zoom);
-        var rightbottom = map.pointToCoordinate(new Point([x + distance, y + distance]), zoom);
+        var lt = this._pointToCoordinateWithZoom([x - distance, y - distance], zoom);
+        var rt = this._pointToCoordinateWithZoom([x + distance, y - distance], zoom);
+        var rb = this._pointToCoordinateWithZoom([x + distance, y + distance], zoom);
+        var lb = this._pointToCoordinateWithZoom([x - distance, y + distance], zoom);
         return {
             type: 'Feature',
             properties: {},
             geometry: {
                 type: 'Polygon',
-                coordinates: [[[lefttop.x, lefttop.y], [righttop.x, righttop.y], [rightbottom.x, rightbottom.y], [leftbottom.x, leftbottom.y]]]
+                coordinates: [[[lt.x, lt.y], [rt.x, rt.y], [rb.x, rb.y], [lb.x, lb.y]]]
             }
         };
     };
 
+    SnapEndPoint.prototype._pointToCoordinateWithZoom = function _pointToCoordinateWithZoom(point, zoom) {
+        var map = this._map;
+        return map.pointToCoordinate(new Point(point), zoom);
+    };
+
     SnapEndPoint.prototype._getSnapPoint = function _getSnapPoint(availGeometries) {
-        var _findNearestGeometrie = this._findNearestGeometries(availGeometries.features),
-            geoObject = _findNearestGeometrie.geoObject;
+        var _findNearestFeatures2 = this._findNearestFeatures(availGeometries.features),
+            coordinates = _findNearestFeatures2.coordinates;
 
-        var coordinates = geoObject.geometry.coordinates;
-
-        var snapPoint = {
-            x: coordinates[0],
-            y: coordinates[1]
-        };
+        var snapPoint = { x: coordinates[0], y: coordinates[1] };
         return snapPoint;
     };
 
-    SnapEndPoint.prototype._findNearestGeometries = function _findNearestGeometries(features) {
+    SnapEndPoint.prototype._findNearestFeatures = function _findNearestFeatures(features) {
         var geoObjects = this._setDistance(features);
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'));
-        return geoObjects[0];
+        return geoObjects[0].geoObject.geometry;
     };
 
     SnapEndPoint.prototype._setDistance = function _setDistance(features) {
@@ -6644,10 +6756,9 @@ var SnapEndPoint = function (_maptalks$Class) {
 
         var geoObjects = [];
         features.forEach(function (feature) {
-            var distance = _this8._distToPoint(feature);
-            geoObjects.push({
+            return geoObjects.push({
                 geoObject: feature,
-                distance: distance
+                distance: _this8._distToPoint(feature)
             });
         });
         return geoObjects;
@@ -6740,41 +6851,11 @@ var SnapEndPoint = function (_maptalks$Class) {
         this._resetClickPoint(e.target._clickCoords);
     };
 
-    SnapEndPoint.prototype._getEditCoordinates = function _getEditCoordinates(geometry) {
-        if (this.snapPoint && this._needDeal) {
+    SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
+        if (this.snapPoint) {
             var _snapPoint2 = this.snapPoint,
                 x = _snapPoint2.x,
                 y = _snapPoint2.y;
-
-            var coordsOld = this.geometryCoords;
-            var coords = geometry.getCoordinates();
-
-            var coordsNew = differenceWith_1(coords[0], coordsOld[0], isEqual_1)[0];
-            var coordsIndex = findIndex_1(coords[0], coordsNew);
-
-            coords[0][coordsIndex].x = x;
-            coords[0][coordsIndex].y = y;
-            if (coordsIndex === 0) {
-                coords[0][coords[0].length - 1].x = x;
-                coords[0][coords[0].length - 1].y = y;
-            }
-
-            this._needDeal = false;
-            this._upGeoCoords(coords);
-            geometry.setCoordinates(this.geometryCoords);
-            return geometry;
-        }
-    };
-
-    SnapEndPoint.prototype._upGeoCoords = function _upGeoCoords(coords) {
-        this.geometryCoords = coords;
-    };
-
-    SnapEndPoint.prototype._resetCoordinates = function _resetCoordinates(geometry) {
-        if (this.snapPoint) {
-            var _snapPoint3 = this.snapPoint,
-                x = _snapPoint3.x,
-                y = _snapPoint3.y;
 
             var coords = geometry.getCoordinates();
             var length = coords.length;
@@ -6790,14 +6871,49 @@ var SnapEndPoint = function (_maptalks$Class) {
 
     SnapEndPoint.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
         if (this.snapPoint) {
-            var _snapPoint4 = this.snapPoint,
-                x = _snapPoint4.x,
-                y = _snapPoint4.y;
+            var _snapPoint3 = this.snapPoint,
+                x = _snapPoint3.x,
+                y = _snapPoint3.y;
             var length = clickCoords.length;
 
             clickCoords[length - 1].x = x;
             clickCoords[length - 1].y = y;
         }
+    };
+
+    SnapEndPoint.prototype._getEditCoordinates = function _getEditCoordinates(geometry) {
+        if (this.snapPoint && this._needDeal) {
+            var _snapPoint4 = this.snapPoint,
+                x = _snapPoint4.x,
+                y = _snapPoint4.y;
+
+            var coordsOld0 = this.geometryCoords[0];
+            if (!includes_1(coordsOld0, this.snapPoint)) {
+                var coords = geometry.getCoordinates();
+                var coords0 = coords[0];
+                var length = coords0.length;
+
+
+                var coordsNew = differenceWith_1(coords0, coordsOld0, isEqual_1)[0];
+                var coordsIndex = findIndex_1(coords0, coordsNew);
+
+                coords[0][coordsIndex].x = x;
+                coords[0][coordsIndex].y = y;
+                if (coordsIndex === 0) {
+                    coords[0][length - 1].x = x;
+                    coords[0][length - 1].y = y;
+                }
+
+                this._needDeal = false;
+                this._upGeoCoords(coords);
+                geometry.setCoordinates(this.geometryCoords);
+            }
+            return geometry;
+        }
+    };
+
+    SnapEndPoint.prototype._upGeoCoords = function _upGeoCoords(coords) {
+        this.geometryCoords = coords;
     };
 
     return SnapEndPoint;
