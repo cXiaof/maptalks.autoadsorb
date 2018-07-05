@@ -6628,8 +6628,7 @@ var AdjustTo = function (_maptalks$Class) {
     AdjustTo.prototype._parserToPoints = function _parserToPoints(geo) {
         var _this6 = this;
 
-        var type = geo.getType();
-        var coordinates = type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates();
+        var coordinates = geo.getCoordinates();
         if (this.geometry) {
             var coordsNow = geo.toGeoJSON().geometry.coordinates;
             var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;

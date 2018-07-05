@@ -120,9 +120,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _parserToPoints(geo) {
-        const type = geo.getType()
-        let coordinates =
-            type === 'Circle' || type === 'Ellipse' ? geo.getShell() : geo.getCoordinates()
+        let coordinates = geo.getCoordinates()
         if (this.geometry) {
             const coordsNow = geo.toGeoJSON().geometry.coordinates
             const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
