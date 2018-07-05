@@ -14,7 +14,7 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-const snap = new maptalks.AdjustTo().setLayer(layerSketch)
+new maptalks.AdjustTo().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param

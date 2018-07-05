@@ -6489,7 +6489,8 @@ var AdjustTo = function (_maptalks$Class) {
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
         _this.tree = geojsonRbush_1();
-        _this._distance = _this.options['distance'] || 10;
+        _this._distance = _this.options['distance'];
+        _this._mode = _this.options['mode'];
         _this._layerName = INTERNAL_LAYER_PREFIX + '_AdjustTo';
         return _this;
     }
@@ -6587,6 +6588,16 @@ var AdjustTo = function (_maptalks$Class) {
         var layer = map.getLayer(this._layerName);
         if (layer) layer.remove();
         delete this._mousemoveLayer;
+    };
+
+    AdjustTo.prototype.setMode = function setMode(mode) {
+        this._mode = mode;
+        this._updateGeosSet();
+        return this;
+    };
+
+    AdjustTo.prototype.getMode = function getMode() {
+        return this._mode;
     };
 
     AdjustTo.prototype._addTo = function _addTo(map) {

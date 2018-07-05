@@ -14,7 +14,8 @@ export class AdjustTo extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
-        this._distance = this.options['distance'] || 10
+        this._distance = this.options['distance']
+        this._mode = this.options['mode']
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_AdjustTo`
     }
 
@@ -89,6 +90,16 @@ export class AdjustTo extends maptalks.Class {
         const layer = map.getLayer(this._layerName)
         if (layer) layer.remove()
         delete this._mousemoveLayer
+    }
+
+    setMode(mode) {
+        this._mode = mode
+        this._updateGeosSet()
+        return this
+    }
+
+    getMode() {
+        return this._mode
     }
 
     _addTo(map) {
