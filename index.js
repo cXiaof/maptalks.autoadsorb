@@ -5,23 +5,26 @@ import differenceWith from 'lodash/differenceWith'
 import findIndex from 'lodash/findIndex'
 import includes from 'lodash/includes'
 
-const options = {}
+const options = {
+    mode: 'auto',
+    distance: 10
+}
 
-export class SnapEndPoint extends maptalks.Class {
+export class AdjustTo extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
-        this._distance = 10
-        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_snapendpoint`
+        this._distance = this.options['distance'] || 10
+        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_AdjustTo`
     }
 
     setLayer(layer) {
         if (layer instanceof maptalks.VectorLayer) {
             const map = layer.map
             this._addTo(map)
-            this.snaplayer = layer
-            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
-            this.snaplayer.on('clear', () => this._resetGeosSet(), this)
+            this.adjustlayer = layer
+            this.adjustlayer.on('addgeo', () => this._updateGeosSet(), this)
+            this.adjustlayer.on('clear', () => this._resetGeosSet(), this)
             this.bindDrawTool(map._map_tool)
         }
         return this
@@ -42,7 +45,7 @@ export class SnapEndPoint extends maptalks.Class {
             const layer = geometry._layer
             const map = layer.map
             this._addTo(map)
-            this.snaplayer = layer
+            this.adjustlayer = layer
             this.bindGeometry(geometry)
         }
         return this
@@ -99,7 +102,7 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this.snaplayer.getGeometries()
+        const geometries = this.adjustlayer.getGeometries()
         let geos = []
         geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
         this._geosSet = geos
@@ -172,18 +175,18 @@ export class SnapEndPoint extends maptalks.Class {
                 symbol: {}
             }).addTo(this._mousemoveLayer)
 
-        this._updateSnapPoint(coordinate)
+        this._updateAdjustPoint(coordinate)
     }
 
-    _updateSnapPoint(coordinate) {
+    _updateAdjustPoint(coordinate) {
         if (this._needFindGeometry) {
             const availGeometries = this._findGeometry(coordinate)
 
-            this.snapPoint =
-                availGeometries.features.length > 0 ? this._getSnapPoint(availGeometries) : null
+            this.adjustPoint =
+                availGeometries.features.length > 0 ? this._getAdjustPoint(availGeometries) : null
 
-            if (this.snapPoint) {
-                const { x, y } = this.snapPoint
+            if (this.adjustPoint) {
+                const { x, y } = this.adjustPoint
                 this._marker.setCoordinates([x, y])
             }
         }
@@ -225,10 +228,10 @@ export class SnapEndPoint extends maptalks.Class {
         return map.pointToCoordinate(new maptalks.Point(point), zoom)
     }
 
-    _getSnapPoint(availGeometries) {
+    _getAdjustPoint(availGeometries) {
         const { coordinates } = this._findNearestFeatures(availGeometries.features)
-        const snapPoint = { x: coordinates[0], y: coordinates[1] }
-        return snapPoint
+        const adjustPoint = { x: coordinates[0], y: coordinates[1] }
+        return adjustPoint
     }
 
     _findNearestFeatures(features) {
@@ -301,8 +304,8 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _resetCoordinates(geometry) {
-        if (this.snapPoint) {
-            const { x, y } = this.snapPoint
+        if (this.adjustPoint) {
+            const { x, y } = this.adjustPoint
             const coords = geometry.getCoordinates()
             const { length } = coords
             if (length) {
@@ -315,8 +318,8 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _resetClickPoint(clickCoords) {
-        if (this.snapPoint) {
-            const { x, y } = this.snapPoint
+        if (this.adjustPoint) {
+            const { x, y } = this.adjustPoint
             const { length } = clickCoords
             clickCoords[length - 1].x = x
             clickCoords[length - 1].y = y
@@ -324,10 +327,10 @@ export class SnapEndPoint extends maptalks.Class {
     }
 
     _getEditCoordinates(geometry) {
-        if (this.snapPoint && this._needDeal) {
-            const { x, y } = this.snapPoint
+        if (this.adjustPoint && this._needDeal) {
+            const { x, y } = this.adjustPoint
             const coordsOld0 = this.geometryCoords[0]
-            if (!includes(coordsOld0, this.snapPoint)) {
+            if (!includes(coordsOld0, this.adjustPoint)) {
                 const coords = geometry.getCoordinates()
                 const coords0 = coords[0]
                 const { length } = coords0
@@ -355,4 +358,4 @@ export class SnapEndPoint extends maptalks.Class {
     }
 }
 
-SnapEndPoint.mergeOptions(options)
+AdjustTo.mergeOptions(options)

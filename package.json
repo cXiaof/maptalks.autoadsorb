@@ -1,13 +1,13 @@
 {
-  "name": "maptalks.snapend",
-  "version": "0.1.0",
+  "name": "maptalks.adjustto",
+  "version": "0.1.0 beta",
   "description": "",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": ""
   },
-  "main": "dist/maptalks.snapend.js",
+  "main": "dist/maptalks.adjustto.js",
   "scripts": {
     "version": "gulp minify && git add -A dist",
     "prepublish": "gulp minify",

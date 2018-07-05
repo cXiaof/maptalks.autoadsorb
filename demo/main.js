@@ -14,7 +14,7 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-// const snap = new maptalks.SnapEndPoint().setLayer(layerSketch)
+const snap = new maptalks.AdjustTo().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
@@ -24,7 +24,7 @@ drawTool.on('drawend', (param) => {
         if (isEditing) geometry.endEdit()
         if (!isEditing) geometry.startEdit()
     })
-    new maptalks.SnapEndPoint().setGeometry(geometry)
+    // new maptalks.AdjustTo().setGeometry(geometry)
 })
 
 const modes = [
