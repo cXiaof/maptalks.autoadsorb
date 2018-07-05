@@ -14,7 +14,7 @@ export class AdjustTo extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
-        this._distance = this.options['distance']
+        this._distance = Math.max(this.options['distance'] || options.distance, 1)
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_AdjustTo`
         this._updateModeType()
     }
@@ -103,22 +103,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _updateModeType(mode) {
-        mode = mode || this.options['mode']
-        this._mode = mode
-        switch (mode) {
-            case 'auto':
-                this._modeType = 'a'
-                break
-            case 'vertux':
-                this._modeType = 'v'
-                break
-            case 'border':
-                this._modeType = 'b'
-                break
-            default:
-                this._modeType = 'not found'
-                break
-        }
+        this._mode = mode || this.options['mode'] || options.mode
     }
 
     _addTo(map) {
@@ -134,11 +119,19 @@ export class AdjustTo extends maptalks.Class {
     _updateGeosSet() {
         const geometries = this.adjustlayer.getGeometries()
         let geos = []
-        geometries.forEach((geo) => geos.push(...this._parserToPoints(geo)))
+        geometries.forEach((geo) => {
+            let geoArr = []
+            const modeAuto = this._mode === 'auto'
+            const modeVertux = this._mode === 'vertux'
+            const modeBorder = this._mode === 'border'
+            if (modeAuto || modeVertux) geoArr.push(...this._parseToPoints(geo))
+            if (modeAuto || modeBorder) geoArr.push(...this._parseToLines(geo))
+            geos.push(...geoArr)
+        })
         this._geosSet = geos
     }
 
-    _parserToPoints(geo) {
+    _parseToPoints(geo) {
         let coordinates = geo.getCoordinates()
         if (this.geometry) {
             const coordsNow = geo.toGeoJSON().geometry.coordinates
@@ -161,6 +154,43 @@ export class AdjustTo extends maptalks.Class {
             markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
         )
         return markers
+    }
+
+    _parseToLines(geo) {
+        let geos = []
+        switch (geo.getType()) {
+            case 'Point':
+                const feature = geo.toGeoJSON()
+                feature.properties = {}
+                geos.push(feature)
+                break
+            case 'Polygon':
+                geos.push(...this._parsePolygonToLine(geo))
+                break
+            default:
+                break
+        }
+        return geos
+    }
+
+    _parsePolygonToLine(geo) {
+        const coordinates = geo.getCoordinates()
+        let geos = []
+        if (coordinates[0] instanceof Array)
+            coordinates.forEach((coords) => geos.push(...this._createLine(coords, geo)))
+        else geos.push(...this._createLine(coordinates, geo))
+        return geos
+    }
+
+    _createLine(coords, geo) {
+        let lines = []
+        for (let i = 0; i < coords.length - 1; i++) {
+            const x = coords[i]
+            const y = coords[i + 1]
+            const line = new maptalks.LineString([x, y], { properties: { obj: geo } })
+            lines.push(line.toGeoJSON())
+        }
+        return lines
     }
 
     _resetGeosSet() {
@@ -257,25 +287,91 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _getAdjustPoint(availGeometries) {
-        const { coordinates } = this._findNearestFeatures(availGeometries.features)
-        const adjustPoint = { x: coordinates[0], y: coordinates[1] }
-        return adjustPoint
+        const { geoObject } = this._findNearestFeatures(availGeometries.features)
+        const { coordinates, type } = geoObject.geometry
+        const coords0 = coordinates[0]
+        switch (type) {
+            case 'Point':
+                return { x: coords0, y: coordinates[1] }
+            case 'LineString':
+                const nearestLine = this._setEquation(geoObject)
+                const { A, B } = nearestLine
+                const { x, y } = this._mousePoint
+                let adjustPoint
+                if (A === 0) return { x, y: coords0[1] }
+                else if (A === Infinity) return { x: coords0[0], y }
+                else {
+                    const k = B / A
+                    const verticalLine = this._setVertiEquation(k)
+                    return this._solveEquation(nearestLine, verticalLine)
+                }
+            default:
+                return null
+        }
+    }
+
+    _setEquation(line) {
+        const coords = line.geometry.coordinates
+        const from = coords[0]
+        const to = coords[1]
+        const k = Number((from[1] - to[1]) / (from[0] - to[0]).toString())
+        return {
+            A: k,
+            B: -1,
+            C: from[1] - k * from[0]
+        }
+    }
+
+    _setVertiEquation(k) {
+        const { x, y } = this._mousePoint
+        return {
+            A: k,
+            B: -1,
+            C: y - k * x
+        }
+    }
+
+    _solveEquation(equationW, equationU) {
+        const A1 = equationW.A
+        const B1 = equationW.B
+        const C1 = equationW.C
+        const A2 = equationU.A
+        const B2 = equationU.B
+        const C2 = equationU.C
+        const x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1)
+        const y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1)
+        return { x, y }
     }
 
     _findNearestFeatures(features) {
         let geoObjects = this._setDistance(features)
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
-        return geoObjects[0].geoObject.geometry
+        return geoObjects[0]
     }
 
     _setDistance(features) {
         const geoObjects = []
-        features.forEach((feature) =>
-            geoObjects.push({
-                geoObject: feature,
-                distance: this._distToPoint(feature)
-            })
-        )
+        let noPoint = true
+        features.forEach((geo) => {
+            const { type } = geo.geometry
+            noPoint = noPoint && type !== 'Point'
+        })
+        for (let i = 0; i < features.length; i++) {
+            const geoObject = features[i]
+            const { type } = geoObject.geometry
+            let distance
+            switch (type) {
+                case 'Point':
+                    distance = this._distToPoint(geoObject)
+                    break
+                case 'LineString':
+                    distance = noPoint && this._distToPolyline(geoObject)
+                    break
+                default:
+                    break
+            }
+            if (distance) geoObjects.push({ geoObject, distance })
+        }
         return geoObjects
     }
 
@@ -284,6 +380,13 @@ export class AdjustTo extends maptalks.Class {
         const from = [x, y]
         const to = feature.geometry.coordinates
         return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2))
+    }
+
+    _distToPolyline(feature) {
+        const { x, y } = this._mousePoint
+        const { A, B, C } = this._setEquation(feature)
+        const distance = Math.abs((A * x + B * y + C) / Math.sqrt(Math.pow(A, 2) + Math.pow(B, 2)))
+        return distance
     }
 
     _compare(data, propertyName) {

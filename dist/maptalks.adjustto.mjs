@@ -3,7 +3,7 @@
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
-import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, Marker, Point, VectorLayer } from 'maptalks';
+import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, LineString, Marker, Point, VectorLayer } from 'maptalks';
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -6489,7 +6489,7 @@ var AdjustTo = function (_maptalks$Class) {
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
         _this.tree = geojsonRbush_1();
-        _this._distance = _this.options['distance'];
+        _this._distance = Math.max(_this.options['distance'] || options.distance, 1);
         _this._layerName = INTERNAL_LAYER_PREFIX + '_AdjustTo';
         _this._updateModeType();
         return _this;
@@ -6601,22 +6601,7 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._updateModeType = function _updateModeType(mode) {
-        mode = mode || this.options['mode'];
-        this._mode = mode;
-        switch (mode) {
-            case 'auto':
-                this._modeType = 'a';
-                break;
-            case 'vertux':
-                this._modeType = 'v';
-                break;
-            case 'border':
-                this._modeType = 'b';
-                break;
-            default:
-                this._modeType = 'not found';
-                break;
-        }
+        this._mode = mode || this.options['mode'] || options.mode;
     };
 
     AdjustTo.prototype._addTo = function _addTo(map) {
@@ -6635,12 +6620,18 @@ var AdjustTo = function (_maptalks$Class) {
         var geometries = this.adjustlayer.getGeometries();
         var geos = [];
         geometries.forEach(function (geo) {
-            return geos.push.apply(geos, _this5._parserToPoints(geo));
+            var geoArr = [];
+            var modeAuto = _this5._mode === 'auto';
+            var modeVertux = _this5._mode === 'vertux';
+            var modeBorder = _this5._mode === 'border';
+            if (modeAuto || modeVertux) geoArr.push.apply(geoArr, _this5._parseToPoints(geo));
+            if (modeAuto || modeBorder) geoArr.push.apply(geoArr, _this5._parseToLines(geo));
+            geos.push.apply(geos, geoArr);
         });
         this._geosSet = geos;
     };
 
-    AdjustTo.prototype._parserToPoints = function _parserToPoints(geo) {
+    AdjustTo.prototype._parseToPoints = function _parseToPoints(geo) {
         var _this6 = this;
 
         var coordinates = geo.getCoordinates();
@@ -6667,25 +6658,64 @@ var AdjustTo = function (_maptalks$Class) {
         return markers;
     };
 
+    AdjustTo.prototype._parseToLines = function _parseToLines(geo) {
+        var geos = [];
+        switch (geo.getType()) {
+            case 'Point':
+                var feature = geo.toGeoJSON();
+                feature.properties = {};
+                geos.push(feature);
+                break;
+            case 'Polygon':
+                geos.push.apply(geos, this._parsePolygonToLine(geo));
+                break;
+            default:
+                break;
+        }
+        return geos;
+    };
+
+    AdjustTo.prototype._parsePolygonToLine = function _parsePolygonToLine(geo) {
+        var _this7 = this;
+
+        var coordinates = geo.getCoordinates();
+        var geos = [];
+        if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
+            return geos.push.apply(geos, _this7._createLine(coords, geo));
+        });else geos.push.apply(geos, this._createLine(coordinates, geo));
+        return geos;
+    };
+
+    AdjustTo.prototype._createLine = function _createLine(coords, geo) {
+        var lines = [];
+        for (var i = 0; i < coords.length - 1; i++) {
+            var x = coords[i];
+            var y = coords[i + 1];
+            var line = new LineString([x, y], { properties: { obj: geo } });
+            lines.push(line.toGeoJSON());
+        }
+        return lines;
+    };
+
     AdjustTo.prototype._resetGeosSet = function _resetGeosSet() {
         this._geosSet = [];
     };
 
     AdjustTo.prototype._registerMapEvents = function _registerMapEvents() {
-        var _this7 = this;
+        var _this8 = this;
 
         if (!this._mousemove) {
             var _map3 = this._map;
             this._mousemove = function (e) {
-                return _this7._mousemoveEvents(e);
+                return _this8._mousemoveEvents(e);
             };
             this._mousedown = function () {
-                if (_this7.drawTool) _this7._needFindGeometry = false;
-                if (_this7.geometry) _this7._needFindGeometry = true;
+                if (_this8.drawTool) _this8._needFindGeometry = false;
+                if (_this8.geometry) _this8._needFindGeometry = true;
             };
             this._mouseup = function () {
-                if (_this7.drawTool) _this7._needFindGeometry = true;
-                if (_this7.geometry) _this7._needFindGeometry = false;
+                if (_this8.drawTool) _this8._needFindGeometry = true;
+                if (_this8.geometry) _this8._needFindGeometry = false;
             };
             _map3.on('mousemove touchstart', this._mousemove, this);
             _map3.on('mousedown', this._mousedown, this);
@@ -6771,39 +6801,127 @@ var AdjustTo = function (_maptalks$Class) {
 
     AdjustTo.prototype._getAdjustPoint = function _getAdjustPoint(availGeometries) {
         var _findNearestFeatures2 = this._findNearestFeatures(availGeometries.features),
-            coordinates = _findNearestFeatures2.coordinates;
+            geoObject = _findNearestFeatures2.geoObject;
 
-        var adjustPoint = { x: coordinates[0], y: coordinates[1] };
-        return adjustPoint;
+        var _geoObject$geometry = geoObject.geometry,
+            coordinates = _geoObject$geometry.coordinates,
+            type = _geoObject$geometry.type;
+
+        var coords0 = coordinates[0];
+        switch (type) {
+            case 'Point':
+                return { x: coords0, y: coordinates[1] };
+            case 'LineString':
+                var nearestLine = this._setEquation(geoObject);
+                var A = nearestLine.A,
+                    B = nearestLine.B;
+                var _mousePoint = this._mousePoint,
+                    x = _mousePoint.x,
+                    y = _mousePoint.y;
+
+                var adjustPoint = void 0;
+                if (A === 0) return { x: x, y: coords0[1] };else if (A === Infinity) return { x: coords0[0], y: y };else {
+                    var k = B / A;
+                    var verticalLine = this._setVertiEquation(k);
+                    return this._solveEquation(nearestLine, verticalLine);
+                }
+            default:
+                return null;
+        }
+    };
+
+    AdjustTo.prototype._setEquation = function _setEquation(line) {
+        var coords = line.geometry.coordinates;
+        var from = coords[0];
+        var to = coords[1];
+        var k = Number((from[1] - to[1]) / (from[0] - to[0]).toString());
+        return {
+            A: k,
+            B: -1,
+            C: from[1] - k * from[0]
+        };
+    };
+
+    AdjustTo.prototype._setVertiEquation = function _setVertiEquation(k) {
+        var _mousePoint2 = this._mousePoint,
+            x = _mousePoint2.x,
+            y = _mousePoint2.y;
+
+        return {
+            A: k,
+            B: -1,
+            C: y - k * x
+        };
+    };
+
+    AdjustTo.prototype._solveEquation = function _solveEquation(equationW, equationU) {
+        var A1 = equationW.A;
+        var B1 = equationW.B;
+        var C1 = equationW.C;
+        var A2 = equationU.A;
+        var B2 = equationU.B;
+        var C2 = equationU.C;
+        var x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1);
+        var y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1);
+        return { x: x, y: y };
     };
 
     AdjustTo.prototype._findNearestFeatures = function _findNearestFeatures(features) {
         var geoObjects = this._setDistance(features);
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'));
-        return geoObjects[0].geoObject.geometry;
+        return geoObjects[0];
     };
 
     AdjustTo.prototype._setDistance = function _setDistance(features) {
-        var _this8 = this;
-
         var geoObjects = [];
-        features.forEach(function (feature) {
-            return geoObjects.push({
-                geoObject: feature,
-                distance: _this8._distToPoint(feature)
-            });
+        var noPoint = true;
+        features.forEach(function (geo) {
+            var type = geo.geometry.type;
+
+            noPoint = noPoint && type !== 'Point';
         });
+        for (var i = 0; i < features.length; i++) {
+            var geoObject = features[i];
+            var type = geoObject.geometry.type;
+
+            var distance = void 0;
+            switch (type) {
+                case 'Point':
+                    distance = this._distToPoint(geoObject);
+                    break;
+                case 'LineString':
+                    distance = noPoint && this._distToPolyline(geoObject);
+                    break;
+                default:
+                    break;
+            }
+            if (distance) geoObjects.push({ geoObject: geoObject, distance: distance });
+        }
         return geoObjects;
     };
 
     AdjustTo.prototype._distToPoint = function _distToPoint(feature) {
-        var _mousePoint = this._mousePoint,
-            x = _mousePoint.x,
-            y = _mousePoint.y;
+        var _mousePoint3 = this._mousePoint,
+            x = _mousePoint3.x,
+            y = _mousePoint3.y;
 
         var from = [x, y];
         var to = feature.geometry.coordinates;
         return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2));
+    };
+
+    AdjustTo.prototype._distToPolyline = function _distToPolyline(feature) {
+        var _mousePoint4 = this._mousePoint,
+            x = _mousePoint4.x,
+            y = _mousePoint4.y;
+
+        var _setEquation2 = this._setEquation(feature),
+            A = _setEquation2.A,
+            B = _setEquation2.B,
+            C = _setEquation2.C;
+
+        var distance = Math.abs((A * x + B * y + C) / Math.sqrt(Math.pow(A, 2) + Math.pow(B, 2)));
+        return distance;
     };
 
     AdjustTo.prototype._compare = function _compare(data, propertyName) {

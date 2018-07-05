@@ -14,17 +14,22 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-new maptalks.AdjustTo().setLayer(layerSketch)
+const adjust = new maptalks.AdjustTo().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
     geometry.addTo(layerSketch)
     geometry.on('contextmenu', () => {
         const isEditing = geometry.isEditing()
-        if (isEditing) geometry.endEdit()
-        if (!isEditing) geometry.startEdit()
+        if (isEditing) {
+            adjust.setLayer(layerSketch)
+            geometry.endEdit()
+        }
+        if (!isEditing) {
+            adjust.setGeometry(geometry)
+            geometry.startEdit()
+        }
     })
-    // new maptalks.AdjustTo().setGeometry(geometry)
 })
 
 const modes = [
