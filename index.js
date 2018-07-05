@@ -132,7 +132,7 @@ export class AdjustTo extends maptalks.Class {
         if (coordinates[0] instanceof Array)
             coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
         else {
-            if (!coordinates instanceof Array) coordinates = [coordinates]
+            if (!(coordinates instanceof Array)) coordinates = [coordinates]
             geos.push(...this._createMarkers(coordinates))
         }
         return geos

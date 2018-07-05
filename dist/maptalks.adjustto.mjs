@@ -6635,7 +6635,7 @@ var AdjustTo = function (_maptalks$Class) {
         if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
             return geos.push.apply(geos, _this6._createMarkers(coords));
         });else {
-            if (!coordinates instanceof Array) coordinates = [coordinates];
+            if (!(coordinates instanceof Array)) coordinates = [coordinates];
             geos.push.apply(geos, this._createMarkers(coordinates));
         }
         return geos;
