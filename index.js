@@ -15,8 +15,8 @@ export class AdjustTo extends maptalks.Class {
         super(options)
         this.tree = rbush()
         this._distance = this.options['distance']
-        this._mode = this.options['mode']
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_AdjustTo`
+        this._updateModeType()
     }
 
     setLayer(layer) {
@@ -93,13 +93,32 @@ export class AdjustTo extends maptalks.Class {
     }
 
     setMode(mode) {
-        this._mode = mode
+        this._updateModeType(mode)
         this._updateGeosSet()
         return this
     }
 
     getMode() {
         return this._mode
+    }
+
+    _updateModeType(mode) {
+        mode = mode || this.options['mode']
+        this._mode = mode
+        switch (mode) {
+            case 'auto':
+                this._modeType = 'a'
+                break
+            case 'vertux':
+                this._modeType = 'v'
+                break
+            case 'border':
+                this._modeType = 'b'
+                break
+            default:
+                this._modeType = 'not found'
+                break
+        }
     }
 
     _addTo(map) {

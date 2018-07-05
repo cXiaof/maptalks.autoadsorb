@@ -6490,8 +6490,8 @@ var AdjustTo = function (_maptalks$Class) {
 
         _this.tree = geojsonRbush_1();
         _this._distance = _this.options['distance'];
-        _this._mode = _this.options['mode'];
         _this._layerName = INTERNAL_LAYER_PREFIX + '_AdjustTo';
+        _this._updateModeType();
         return _this;
     }
 
@@ -6591,13 +6591,32 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype.setMode = function setMode(mode) {
-        this._mode = mode;
+        this._updateModeType(mode);
         this._updateGeosSet();
         return this;
     };
 
     AdjustTo.prototype.getMode = function getMode() {
         return this._mode;
+    };
+
+    AdjustTo.prototype._updateModeType = function _updateModeType(mode) {
+        mode = mode || this.options['mode'];
+        this._mode = mode;
+        switch (mode) {
+            case 'auto':
+                this._modeType = 'a';
+                break;
+            case 'vertux':
+                this._modeType = 'v';
+                break;
+            case 'border':
+                this._modeType = 'b';
+                break;
+            default:
+                this._modeType = 'not found';
+                break;
+        }
     };
 
     AdjustTo.prototype._addTo = function _addTo(map) {
