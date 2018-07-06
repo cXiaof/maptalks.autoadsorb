@@ -1,5 +1,5 @@
 /*!
- * maptalks.adjustto v0.1.0 beta
+ * maptalks.adjustto v0.2.0 beta
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -6800,9 +6800,9 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._getAdjustPoint = function _getAdjustPoint(availGeometries) {
-        var _findNearestFeatures2 = this._findNearestFeatures(availGeometries.features),
-            geoObject = _findNearestFeatures2.geoObject;
-
+        var nearestFeature = this._findNearestFeatures(availGeometries.features);
+        if (!nearestFeature) return null;
+        var geoObject = nearestFeature.geoObject;
         var _geoObject$geometry = geoObject.geometry,
             coordinates = _geoObject$geometry.coordinates,
             type = _geoObject$geometry.type;
@@ -6868,6 +6868,7 @@ var AdjustTo = function (_maptalks$Class) {
 
     AdjustTo.prototype._findNearestFeatures = function _findNearestFeatures(features) {
         var geoObjects = this._setDistance(features);
+        if (geoObjects.length === 0) return null;
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'));
         return geoObjects[0];
     };
@@ -7073,4 +7074,4 @@ AdjustTo.mergeOptions(options);
 
 export { AdjustTo };
 
-typeof console !== 'undefined' && console.log('maptalks.adjustto v0.1.0 beta');
+typeof console !== 'undefined' && console.log('maptalks.adjustto v0.2.0 beta');

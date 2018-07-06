@@ -287,7 +287,9 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _getAdjustPoint(availGeometries) {
-        const { geoObject } = this._findNearestFeatures(availGeometries.features)
+        const nearestFeature = this._findNearestFeatures(availGeometries.features)
+        if (!nearestFeature) return null
+        const { geoObject } = nearestFeature
         const { coordinates, type } = geoObject.geometry
         const coords0 = coordinates[0]
         switch (type) {
@@ -345,6 +347,7 @@ export class AdjustTo extends maptalks.Class {
 
     _findNearestFeatures(features) {
         let geoObjects = this._setDistance(features)
+        if (geoObjects.length === 0) return null
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'))
         return geoObjects[0]
     }

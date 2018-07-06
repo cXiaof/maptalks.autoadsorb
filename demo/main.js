@@ -32,23 +32,23 @@ drawTool.on('drawend', (param) => {
     })
 })
 
-const modes = [
-    'Point',
-    'LineString',
-    'Polygon',
-    'Circle',
-    'Ellipse',
-    'Rectangle',
-    'FreeHandLineString',
-    'FreeHandPolygon'
-]
-let children = []
-modes.map((value) => children.push({ item: value, click: () => drawTool.setMode(value).enable() }))
+const modesDraw = ['Point', 'LineString', 'Polygon', 'Circle', 'Ellipse', 'Rectangle']
+let childrenDraw = []
+modesDraw.map((item) => childrenDraw.push({ item, click: () => drawTool.setMode(item).enable() }))
+
+const modesPlug = ['auto', 'vertux', 'border']
+let childrenPlug = []
+modesPlug.map((item) => childrenPlug.push({ item, click: () => adjust.setMode(item) }))
+
 const toolbar = new maptalks.control.Toolbar({
     items: [
         {
             item: 'Draw',
-            children
+            children: childrenDraw
+        },
+        {
+            item: 'Mode',
+            children: childrenPlug
         },
         {
             item: 'Stop',
