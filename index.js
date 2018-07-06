@@ -4,6 +4,7 @@ import isEqual from 'lodash/isEqual'
 import differenceWith from 'lodash/differenceWith'
 import findIndex from 'lodash/findIndex'
 import includes from 'lodash/includes'
+import flattenDeep from 'lodash/flattenDeep'
 
 const options = {
     mode: 'auto',
@@ -145,6 +146,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _skipGeoSelf(geo) {
+        if (geo.type === 'MultiPolygon') return false
         if (this.geometry) {
             const coordsNow = geo.toGeoJSON().geometry.coordinates
             const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
@@ -155,7 +157,7 @@ export class AdjustTo extends maptalks.Class {
 
     _createMarkers(coords) {
         const markers = []
-        coords.forEach((coord) =>
+        flattenDeep(coords).forEach((coord) =>
             markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
         )
         return markers
@@ -175,9 +177,19 @@ export class AdjustTo extends maptalks.Class {
     _parsePolygonToLine(geo) {
         const coordinates = geo.getCoordinates()
         let geos = []
-        if (coordinates[0] instanceof Array)
-            coordinates.forEach((coords) => geos.push(...this._createLine(coords, geo)))
-        else geos.push(...this._createLine(coordinates, geo))
+        switch (geo.type) {
+            case 'MultiPolygon':
+                coordinates.forEach((coords) =>
+                    coords.forEach((coordsItem) => geos.push(...this._createLine(coordsItem, geo)))
+                )
+                break
+            case 'Polygon':
+                coordinates.forEach((coords) => geos.push(...this._createLine(coords, geo)))
+                break
+            default:
+                geos.push(...this._createLine(coordinates, geo))
+                break
+        }
         return geos
     }
 
@@ -484,6 +496,14 @@ export class AdjustTo extends maptalks.Class {
             }
             return geometry
         }
+    }
+
+    _findEditedMultiIndex(geometry) {
+        let index = 0
+        this.geometryCoords.forEach((coords, i) => {
+            if (JSON.stringify(coords) !== JSON.stringify(geometry.getCoordinates())) index = i
+        })
+        return index
     }
 
     _upGeoCoords(coords) {

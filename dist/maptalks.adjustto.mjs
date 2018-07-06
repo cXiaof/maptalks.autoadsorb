@@ -6467,6 +6467,30 @@ function includes(collection, value, fromIndex, guard) {
 
 var includes_1 = includes;
 
+/** Used as references for various `Number` constants. */
+var INFINITY$3 = 1 / 0;
+
+/**
+ * Recursively flattens `array`.
+ *
+ * @static
+ * @memberOf _
+ * @since 3.0.0
+ * @category Array
+ * @param {Array} array The array to flatten.
+ * @returns {Array} Returns the new flattened array.
+ * @example
+ *
+ * _.flattenDeep([1, [2, [3, [4]], 5]]);
+ * // => [1, 2, 3, 4, 5]
+ */
+function flattenDeep(array) {
+  var length = array == null ? 0 : array.length;
+  return length ? _baseFlatten(array, INFINITY$3) : [];
+}
+
+var flattenDeep_1 = flattenDeep;
+
 function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -6647,6 +6671,7 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._skipGeoSelf = function _skipGeoSelf(geo) {
+        if (geo.type === 'MultiPolygon') return false;
         if (this.geometry) {
             var coordsNow = geo.toGeoJSON().geometry.coordinates;
             var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;
@@ -6657,7 +6682,7 @@ var AdjustTo = function (_maptalks$Class) {
 
     AdjustTo.prototype._createMarkers = function _createMarkers(coords) {
         var markers = [];
-        coords.forEach(function (coord) {
+        flattenDeep_1(coords).forEach(function (coord) {
             return markers.push(new Marker(coord, { properties: {} }).toGeoJSON());
         });
         return markers;
@@ -6679,9 +6704,23 @@ var AdjustTo = function (_maptalks$Class) {
 
         var coordinates = geo.getCoordinates();
         var geos = [];
-        if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
-            return geos.push.apply(geos, _this7._createLine(coords, geo));
-        });else geos.push.apply(geos, this._createLine(coordinates, geo));
+        switch (geo.type) {
+            case 'MultiPolygon':
+                coordinates.forEach(function (coords) {
+                    return coords.forEach(function (coordsItem) {
+                        return geos.push.apply(geos, _this7._createLine(coordsItem, geo));
+                    });
+                });
+                break;
+            case 'Polygon':
+                coordinates.forEach(function (coords) {
+                    return geos.push.apply(geos, _this7._createLine(coords, geo));
+                });
+                break;
+            default:
+                geos.push.apply(geos, this._createLine(coordinates, geo));
+                break;
+        }
         return geos;
     };
 
@@ -7065,6 +7104,14 @@ var AdjustTo = function (_maptalks$Class) {
             }
             return geometry;
         }
+    };
+
+    AdjustTo.prototype._findEditedMultiIndex = function _findEditedMultiIndex(geometry) {
+        var index = 0;
+        this.geometryCoords.forEach(function (coords, i) {
+            if (JSON.stringify(coords) !== JSON.stringify(geometry.getCoordinates())) index = i;
+        });
+        return index;
     };
 
     AdjustTo.prototype._upGeoCoords = function _upGeoCoords(coords) {
