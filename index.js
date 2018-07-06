@@ -304,15 +304,16 @@ export class AdjustTo extends maptalks.Class {
         }
     }
 
-    _setEquation(line) {
-        const coords = line.geometry.coordinates
-        const from = coords[0]
-        const to = coords[1]
-        const k = Number((from[1] - to[1]) / (from[0] - to[0]).toString())
+    _setEquation(geoObject) {
+        const [from, to] = geoObject.geometry.coordinates
+        const [fromX, fromY] = from
+        const [toX, toY] = to
+        let k = (fromY - toY) / (fromX - toX)
+        k = k === -Infinity ? -k : k
         return {
             A: k,
             B: -1,
-            C: from[1] - k * from[0]
+            C: fromY - k * fromX
         }
     }
 

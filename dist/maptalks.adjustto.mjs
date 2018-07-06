@@ -6822,15 +6822,21 @@ var AdjustTo = function (_maptalks$Class) {
         }
     };
 
-    AdjustTo.prototype._setEquation = function _setEquation(line) {
-        var coords = line.geometry.coordinates;
-        var from = coords[0];
-        var to = coords[1];
-        var k = Number((from[1] - to[1]) / (from[0] - to[0]).toString());
+    AdjustTo.prototype._setEquation = function _setEquation(geoObject) {
+        var _geoObject$geometry$c = geoObject.geometry.coordinates,
+            from = _geoObject$geometry$c[0],
+            to = _geoObject$geometry$c[1];
+        var fromX = from[0],
+            fromY = from[1];
+        var toX = to[0],
+            toY = to[1];
+
+        var k = (fromY - toY) / (fromX - toX);
+        k = k === -Infinity ? -k : k;
         return {
             A: k,
             B: -1,
-            C: from[1] - k * from[0]
+            C: fromY - k * fromX
         };
     };
 
