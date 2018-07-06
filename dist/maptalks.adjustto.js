@@ -6664,18 +6664,11 @@ var AdjustTo = function (_maptalks$Class) {
 
     AdjustTo.prototype._parseToLines = function _parseToLines(geo) {
         var geos = [];
-        switch (geo.getType()) {
-            case 'Point':
-                var feature = geo.toGeoJSON();
-                feature.properties = {};
-                geos.push(feature);
-                break;
-            case 'Polygon':
-                geos.push.apply(geos, this._parsePolygonToLine(geo));
-                break;
-            default:
-                break;
-        }
+        if (geo.getType() === 'Point') {
+            var feature = geo.toGeoJSON();
+            feature.properties = {};
+            geos.push(feature);
+        } else geos.push.apply(geos, this._parsePolygonToLine(geo));
         return geos;
     };
 
@@ -6823,7 +6816,6 @@ var AdjustTo = function (_maptalks$Class) {
                     x = _mousePoint.x,
                     y = _mousePoint.y;
 
-                var adjustPoint = void 0;
                 if (A === 0) return { x: x, y: coords0[1] };else if (A === Infinity) return { x: coords0[0], y: y };else {
                     var k = B / A;
                     var verticalLine = this._setVertiEquation(k);
@@ -6900,7 +6892,7 @@ var AdjustTo = function (_maptalks$Class) {
                 default:
                     break;
             }
-            if (distance) geoObjects.push({ geoObject: geoObject, distance: distance });
+            if (distance !== undefined) geoObjects.push({ geoObject: geoObject, distance: distance });
         }
         return geoObjects;
     };

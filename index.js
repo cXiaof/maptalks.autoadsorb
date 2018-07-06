@@ -158,18 +158,11 @@ export class AdjustTo extends maptalks.Class {
 
     _parseToLines(geo) {
         let geos = []
-        switch (geo.getType()) {
-            case 'Point':
-                const feature = geo.toGeoJSON()
-                feature.properties = {}
-                geos.push(feature)
-                break
-            case 'Polygon':
-                geos.push(...this._parsePolygonToLine(geo))
-                break
-            default:
-                break
-        }
+        if (geo.getType() === 'Point') {
+            const feature = geo.toGeoJSON()
+            feature.properties = {}
+            geos.push(feature)
+        } else geos.push(...this._parsePolygonToLine(geo))
         return geos
     }
 
@@ -299,7 +292,6 @@ export class AdjustTo extends maptalks.Class {
                 const nearestLine = this._setEquation(geoObject)
                 const { A, B } = nearestLine
                 const { x, y } = this._mousePoint
-                let adjustPoint
                 if (A === 0) return { x, y: coords0[1] }
                 else if (A === Infinity) return { x: coords0[0], y }
                 else {
@@ -373,7 +365,7 @@ export class AdjustTo extends maptalks.Class {
                 default:
                     break
             }
-            if (distance) geoObjects.push({ geoObject, distance })
+            if (distance !== undefined) geoObjects.push({ geoObject, distance })
         }
         return geoObjects
     }
