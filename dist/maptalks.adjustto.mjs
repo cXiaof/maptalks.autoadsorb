@@ -6738,9 +6738,9 @@ var AdjustTo = function (_maptalks$Class) {
 
     AdjustTo.prototype._updateAdjustPoint = function _updateAdjustPoint(coordinate) {
         if (this._needFindGeometry) {
-            var availGeometries = this._findGeometry(coordinate);
+            var availGeos = this._findGeometry(coordinate);
 
-            this.adjustPoint = availGeometries.features.length > 0 ? this._getAdjustPoint(availGeometries) : null;
+            this.adjustPoint = availGeos && availGeos.features.length > 0 ? this._getAdjustPoint(availGeos) : null;
 
             if (this.adjustPoint) {
                 var _adjustPoint = this.adjustPoint,
@@ -6758,8 +6758,8 @@ var AdjustTo = function (_maptalks$Class) {
             this.tree.clear();
             this.tree.load({ type: 'FeatureCollection', features: features });
             this.inspectExtent = this._createInspectExtent(coordinate);
-            var availGeometries = this.tree.search(this.inspectExtent);
-            return availGeometries;
+            var availGeos = this.tree.search(this.inspectExtent);
+            return availGeos;
         }
         return null;
     };
@@ -6792,8 +6792,8 @@ var AdjustTo = function (_maptalks$Class) {
         return map.pointToCoordinate(new Point(point), zoom);
     };
 
-    AdjustTo.prototype._getAdjustPoint = function _getAdjustPoint(availGeometries) {
-        var nearestFeature = this._findNearestFeatures(availGeometries.features);
+    AdjustTo.prototype._getAdjustPoint = function _getAdjustPoint(availGeos) {
+        var nearestFeature = this._findNearestFeatures(availGeos.features);
         if (!nearestFeature) return null;
         var geoObject = nearestFeature.geoObject;
         var _geoObject$geometry = geoObject.geometry,
@@ -6883,7 +6883,7 @@ var AdjustTo = function (_maptalks$Class) {
                     distance = this._distToPoint(geoObject);
                     break;
                 case 'LineString':
-                    distance = noPoint && this._distToPolyline(geoObject);
+                    if (noPoint) distance = this._distToPolyline(geoObject);
                     break;
                 default:
                     break;

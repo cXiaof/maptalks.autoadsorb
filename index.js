@@ -231,10 +231,10 @@ export class AdjustTo extends maptalks.Class {
 
     _updateAdjustPoint(coordinate) {
         if (this._needFindGeometry) {
-            const availGeometries = this._findGeometry(coordinate)
+            const availGeos = this._findGeometry(coordinate)
 
             this.adjustPoint =
-                availGeometries.features.length > 0 ? this._getAdjustPoint(availGeometries) : null
+                availGeos && availGeos.features.length > 0 ? this._getAdjustPoint(availGeos) : null
 
             if (this.adjustPoint) {
                 const { x, y } = this.adjustPoint
@@ -249,8 +249,8 @@ export class AdjustTo extends maptalks.Class {
             this.tree.clear()
             this.tree.load({ type: 'FeatureCollection', features })
             this.inspectExtent = this._createInspectExtent(coordinate)
-            const availGeometries = this.tree.search(this.inspectExtent)
-            return availGeometries
+            const availGeos = this.tree.search(this.inspectExtent)
+            return availGeos
         }
         return null
     }
@@ -279,8 +279,8 @@ export class AdjustTo extends maptalks.Class {
         return map.pointToCoordinate(new maptalks.Point(point), zoom)
     }
 
-    _getAdjustPoint(availGeometries) {
-        const nearestFeature = this._findNearestFeatures(availGeometries.features)
+    _getAdjustPoint(availGeos) {
+        const nearestFeature = this._findNearestFeatures(availGeos.features)
         if (!nearestFeature) return null
         const { geoObject } = nearestFeature
         const { coordinates, type } = geoObject.geometry
@@ -360,7 +360,7 @@ export class AdjustTo extends maptalks.Class {
                     distance = this._distToPoint(geoObject)
                     break
                 case 'LineString':
-                    distance = noPoint && this._distToPolyline(geoObject)
+                    if (noPoint) distance = this._distToPolyline(geoObject)
                     break
                 default:
                     break
