@@ -6638,13 +6638,9 @@ var AdjustTo = function (_maptalks$Class) {
     AdjustTo.prototype._parseToPoints = function _parseToPoints(geo) {
         var _this6 = this;
 
-        var coordinates = geo.getCoordinates();
-        if (this.geometry) {
-            var coordsNow = geo.toGeoJSON().geometry.coordinates;
-            var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;
-            if (isEqual_1(coordsNow, coordsThis)) return [];
-        }
+        if (this._skipGeoSelf(geo)) return [];
         var geos = [];
+        var coordinates = geo.getCoordinates();
         if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
             return geos.push.apply(geos, _this6._createMarkers(coords));
         });else {
@@ -6652,6 +6648,15 @@ var AdjustTo = function (_maptalks$Class) {
             geos.push.apply(geos, this._createMarkers(coordinates));
         }
         return geos;
+    };
+
+    AdjustTo.prototype._skipGeoSelf = function _skipGeoSelf(geo) {
+        if (this.geometry) {
+            var coordsNow = geo.toGeoJSON().geometry.coordinates;
+            var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;
+            return isEqual_1(coordsNow, coordsThis);
+        }
+        return false;
     };
 
     AdjustTo.prototype._createMarkers = function _createMarkers(coords) {
@@ -6663,6 +6668,7 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._parseToLines = function _parseToLines(geo) {
+        if (this._skipGeoSelf(geo)) return [];
         var geos = [];
         if (geo.getType() === 'Point') {
             var feature = geo.toGeoJSON();

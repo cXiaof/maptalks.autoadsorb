@@ -132,13 +132,9 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _parseToPoints(geo) {
-        let coordinates = geo.getCoordinates()
-        if (this.geometry) {
-            const coordsNow = geo.toGeoJSON().geometry.coordinates
-            const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
-            if (isEqual(coordsNow, coordsThis)) return []
-        }
+        if (this._skipGeoSelf(geo)) return []
         let geos = []
+        let coordinates = geo.getCoordinates()
         if (coordinates[0] instanceof Array)
             coordinates.forEach((coords) => geos.push(...this._createMarkers(coords)))
         else {
@@ -146,6 +142,15 @@ export class AdjustTo extends maptalks.Class {
             geos.push(...this._createMarkers(coordinates))
         }
         return geos
+    }
+
+    _skipGeoSelf(geo) {
+        if (this.geometry) {
+            const coordsNow = geo.toGeoJSON().geometry.coordinates
+            const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
+            return isEqual(coordsNow, coordsThis)
+        }
+        return false
     }
 
     _createMarkers(coords) {
@@ -157,6 +162,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _parseToLines(geo) {
+        if (this._skipGeoSelf(geo)) return []
         let geos = []
         if (geo.getType() === 'Point') {
             const feature = geo.toGeoJSON()
