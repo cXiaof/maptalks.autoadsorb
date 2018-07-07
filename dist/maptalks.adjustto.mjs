@@ -6672,7 +6672,6 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._skipGeoSelf = function _skipGeoSelf(geo) {
-        if (geo.type === 'MultiPolygon') return false;
         if (this.geometry) {
             var coordsNow = geo.toGeoJSON().geometry.coordinates;
             var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;
@@ -7020,7 +7019,7 @@ var AdjustTo = function (_maptalks$Class) {
 
         var geometry = this.geometry;
         geometry.on('shapechange', function (e) {
-            return _this11._getEditCoordinates(e.target);
+            return _this11._setEditCoordinates(e.target);
         }, this);
         geometry.on('editrecord', function (e) {
             return _this11._upGeoCoords(e.target.getCoordinates());
@@ -7033,7 +7032,7 @@ var AdjustTo = function (_maptalks$Class) {
         if (this.geometry) {
             var geometry = this.geometry;
             geometry.off('shapechange', function (e) {
-                return _this12._getEditCoordinates(e.target);
+                return _this12._setEditCoordinates(e.target);
             }, this);
             geometry.off('editrecord', function (e) {
                 return _this12._upGeoCoords(e.target.getCoordinates());
@@ -7076,8 +7075,8 @@ var AdjustTo = function (_maptalks$Class) {
         }
     };
 
-    AdjustTo.prototype._getEditCoordinates = function _getEditCoordinates(geo) {
-        if (this.adjustPoint && this._needDeal) {
+    AdjustTo.prototype._setEditCoordinates = function _setEditCoordinates(geo) {
+        if (this.adjustPoint && this._needDeal && !isMultigeo) {
             var _adjustPoint4 = this.adjustPoint,
                 x = _adjustPoint4.x,
                 y = _adjustPoint4.y;
@@ -7104,14 +7103,6 @@ var AdjustTo = function (_maptalks$Class) {
                 geo.setCoordinates(this.geometryCoords);
             }
         }
-    };
-
-    AdjustTo.prototype._findEditedMultiIndex = function _findEditedMultiIndex(geo) {
-        var index = 0;
-        this.geometryCoords.forEach(function (coords, i) {
-            if (JSON.stringify(coords) !== JSON.stringify(geo.getCoordinates())) index = i;
-        });
-        return index;
     };
 
     AdjustTo.prototype._upGeoCoords = function _upGeoCoords(coords) {

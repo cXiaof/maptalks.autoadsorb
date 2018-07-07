@@ -147,7 +147,6 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _skipGeoSelf(geo) {
-        if (geo.type === 'MultiPolygon') return false
         if (this.geometry) {
             const coordsNow = geo.toGeoJSON().geometry.coordinates
             const coordsThis = this.geometry.toGeoJSON().geometry.coordinates
@@ -432,14 +431,14 @@ export class AdjustTo extends maptalks.Class {
 
     _registerGeometryEvents() {
         const geometry = this.geometry
-        geometry.on('shapechange', (e) => this._getEditCoordinates(e.target), this)
+        geometry.on('shapechange', (e) => this._setEditCoordinates(e.target), this)
         geometry.on('editrecord', (e) => this._upGeoCoords(e.target.getCoordinates()), this)
     }
 
     _offGeometryEvents() {
         if (this.geometry) {
             const geometry = this.geometry
-            geometry.off('shapechange', (e) => this._getEditCoordinates(e.target), this)
+            geometry.off('shapechange', (e) => this._setEditCoordinates(e.target), this)
             geometry.off('editrecord', (e) => this._upGeoCoords(e.target.getCoordinates()), this)
         }
     }
@@ -472,8 +471,8 @@ export class AdjustTo extends maptalks.Class {
         }
     }
 
-    _getEditCoordinates(geo) {
-        if (this.adjustPoint && this._needDeal) {
+    _setEditCoordinates(geo) {
+        if (this.adjustPoint && this._needDeal && !isMultigeo) {
             const { x, y } = this.adjustPoint
             const coordsOld0 = this.geometryCoords[0]
             if (!includes(coordsOld0, this.adjustPoint)) {
@@ -496,14 +495,6 @@ export class AdjustTo extends maptalks.Class {
                 geo.setCoordinates(this.geometryCoords)
             }
         }
-    }
-
-    _findEditedMultiIndex(geo) {
-        let index = 0
-        this.geometryCoords.forEach((coords, i) => {
-            if (JSON.stringify(coords) !== JSON.stringify(geo.getCoordinates())) index = i
-        })
-        return index
     }
 
     _upGeoCoords(coords) {
