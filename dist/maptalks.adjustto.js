@@ -6576,6 +6576,7 @@ var AdjustTo = function (_maptalks$Class) {
         if (geometry instanceof maptalks.Geometry) {
             this.geometry = geometry;
             this.geometryCoords = geometry.getCoordinates();
+            this.isMultigeo = geometry.type === 'MultiPolygon';
             geometry.on('editstart', function (e) {
                 return _this4.enable();
             }, this);
@@ -7049,21 +7050,21 @@ var AdjustTo = function (_maptalks$Class) {
         this._resetClickPoint(e.target._clickCoords);
     };
 
-    AdjustTo.prototype._resetCoordinates = function _resetCoordinates(geometry) {
+    AdjustTo.prototype._resetCoordinates = function _resetCoordinates(geo) {
         if (this.adjustPoint) {
             var _adjustPoint2 = this.adjustPoint,
                 x = _adjustPoint2.x,
                 y = _adjustPoint2.y;
 
-            var coords = geometry.getCoordinates();
+            var coords = geo.getCoordinates();
             var length = coords.length;
 
             if (length) {
                 coords[length - 1].x = x;
                 coords[length - 1].y = y;
             }
-            geometry.setCoordinates(coords);
-            return geometry;
+            geo.setCoordinates(coords);
+            return geo;
         }
     };
 
@@ -7079,7 +7080,7 @@ var AdjustTo = function (_maptalks$Class) {
         }
     };
 
-    AdjustTo.prototype._getEditCoordinates = function _getEditCoordinates(geometry) {
+    AdjustTo.prototype._getEditCoordinates = function _getEditCoordinates(geo) {
         if (this.adjustPoint && this._needDeal) {
             var _adjustPoint4 = this.adjustPoint,
                 x = _adjustPoint4.x,
@@ -7087,7 +7088,7 @@ var AdjustTo = function (_maptalks$Class) {
 
             var coordsOld0 = this.geometryCoords[0];
             if (!includes_1(coordsOld0, this.adjustPoint)) {
-                var coords = geometry.getCoordinates();
+                var coords = geo.getCoordinates();
                 var coords0 = coords[0];
                 var length = coords0.length;
 
@@ -7104,16 +7105,15 @@ var AdjustTo = function (_maptalks$Class) {
 
                 this._needDeal = false;
                 this._upGeoCoords(coords);
-                geometry.setCoordinates(this.geometryCoords);
+                geo.setCoordinates(this.geometryCoords);
             }
-            return geometry;
         }
     };
 
-    AdjustTo.prototype._findEditedMultiIndex = function _findEditedMultiIndex(geometry) {
+    AdjustTo.prototype._findEditedMultiIndex = function _findEditedMultiIndex(geo) {
         var index = 0;
         this.geometryCoords.forEach(function (coords, i) {
-            if (JSON.stringify(coords) !== JSON.stringify(geometry.getCoordinates())) index = i;
+            if (JSON.stringify(coords) !== JSON.stringify(geo.getCoordinates())) index = i;
         });
         return index;
     };

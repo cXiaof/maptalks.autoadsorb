@@ -57,6 +57,7 @@ export class AdjustTo extends maptalks.Class {
         if (geometry instanceof maptalks.Geometry) {
             this.geometry = geometry
             this.geometryCoords = geometry.getCoordinates()
+            this.isMultigeo = geometry.type === 'MultiPolygon'
             geometry.on('editstart', (e) => this.enable(), this)
             geometry.on('editend', (e) => this.disable(), this)
             geometry.on('remove', (e) => this.remove(), this)
@@ -448,17 +449,17 @@ export class AdjustTo extends maptalks.Class {
         this._resetClickPoint(e.target._clickCoords)
     }
 
-    _resetCoordinates(geometry) {
+    _resetCoordinates(geo) {
         if (this.adjustPoint) {
             const { x, y } = this.adjustPoint
-            const coords = geometry.getCoordinates()
+            const coords = geo.getCoordinates()
             const { length } = coords
             if (length) {
                 coords[length - 1].x = x
                 coords[length - 1].y = y
             }
-            geometry.setCoordinates(coords)
-            return geometry
+            geo.setCoordinates(coords)
+            return geo
         }
     }
 
@@ -471,12 +472,12 @@ export class AdjustTo extends maptalks.Class {
         }
     }
 
-    _getEditCoordinates(geometry) {
+    _getEditCoordinates(geo) {
         if (this.adjustPoint && this._needDeal) {
             const { x, y } = this.adjustPoint
             const coordsOld0 = this.geometryCoords[0]
             if (!includes(coordsOld0, this.adjustPoint)) {
-                const coords = geometry.getCoordinates()
+                const coords = geo.getCoordinates()
                 const coords0 = coords[0]
                 const { length } = coords0
 
@@ -492,16 +493,15 @@ export class AdjustTo extends maptalks.Class {
 
                 this._needDeal = false
                 this._upGeoCoords(coords)
-                geometry.setCoordinates(this.geometryCoords)
+                geo.setCoordinates(this.geometryCoords)
             }
-            return geometry
         }
     }
 
-    _findEditedMultiIndex(geometry) {
+    _findEditedMultiIndex(geo) {
         let index = 0
         this.geometryCoords.forEach((coords, i) => {
-            if (JSON.stringify(coords) !== JSON.stringify(geometry.getCoordinates())) index = i
+            if (JSON.stringify(coords) !== JSON.stringify(geo.getCoordinates())) index = i
         })
         return index
     }
