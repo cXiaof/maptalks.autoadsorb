@@ -6928,7 +6928,6 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._distToCircle = function _distToCircle(geo) {
         var r = this._caclCircleRadius(geo);
-        console.log(r);
         var coords = geo.getCoordinates();
         var x0 = coords.x;
         var y0 = coords.y;
@@ -6943,7 +6942,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
         var x = x0 + r * dx / d;
         var y = y0 + r * dy / d;
-        console.log(dx, dy, x, y);
+
         var coordinates = [x, y];
         geo.setProperties({ coordinates: coordinates });
 
@@ -6951,27 +6950,13 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._caclCircleRadius = function _caclCircleRadius(geo) {
-        var coordinates = geo.toGeoJSON().geometry.coordinates[0];
-        var xMin = coordinates[0][0];
-        var xMax = coordinates[0][0];
-        var yMin = coordinates[0][1];
-        var yMax = coordinates[0][1];
-        coordinates.forEach(function (coords) {
-            var x = coords[0],
-                y = coords[1];
-
-            if (xMin > x) {
-                xMin = x;
-                yMin = y;
-            }
-            if (xMax < x) {
-                xMax = x;
-                yMax = y;
-            }
-        });
-        var dx = xMax - xMin;
-        var dy = yMax - yMin;
-        return Math.abs(Math.sqrt(dx * dx + dy * dy)) / 2;
+        var x0 = geo.getShell()[0].x;
+        var y0 = geo.getShell()[0].y;
+        var x1 = geo.getCoordinates().x;
+        var y1 = geo.getCoordinates().y;
+        var dx = x1 - x0;
+        var dy = y1 - y0;
+        return Math.abs(Math.sqrt(dx * dx + dy * dy));
     };
 
     Autoadsorb.prototype._distToPoint = function _distToPoint(feature) {

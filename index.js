@@ -373,7 +373,6 @@ export class Autoadsorb extends maptalks.Class {
 
     _distToCircle(geo) {
         const r = this._caclCircleRadius(geo)
-        console.log(r)
         const coords = geo.getCoordinates()
         const x0 = coords.x
         const y0 = coords.y
@@ -388,7 +387,7 @@ export class Autoadsorb extends maptalks.Class {
 
         const x = x0 + (r * dx) / d
         const y = y0 + (r * dy) / d
-        console.log(dx, dy, x, y)
+
         const coordinates = [x, y]
         geo.setProperties({ coordinates })
 
@@ -396,25 +395,13 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _caclCircleRadius(geo) {
-        const coordinates = geo.toGeoJSON().geometry.coordinates[0]
-        let xMin = coordinates[0][0]
-        let xMax = coordinates[0][0]
-        let yMin = coordinates[0][1]
-        let yMax = coordinates[0][1]
-        coordinates.forEach((coords) => {
-            const [x, y] = coords
-            if (xMin > x) {
-                xMin = x
-                yMin = y
-            }
-            if (xMax < x) {
-                xMax = x
-                yMax = y
-            }
-        })
-        const dx = xMax - xMin
-        const dy = yMax - yMin
-        return Math.abs(Math.sqrt(dx * dx + dy * dy)) / 2
+        const x0 = geo.getShell()[0].x
+        const y0 = geo.getShell()[0].y
+        const x1 = geo.getCoordinates().x
+        const y1 = geo.getCoordinates().y
+        const dx = x1 - x0
+        const dy = y1 - y0
+        return Math.abs(Math.sqrt(dx * dx + dy * dy))
     }
 
     _distToPoint(feature) {
