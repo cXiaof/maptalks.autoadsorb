@@ -11,12 +11,12 @@ const options = {
     distance: 10
 }
 
-export class AdjustTo extends maptalks.Class {
+export class Autosnap extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
         this._distance = Math.max(this.options['distance'] || options.distance, 1)
-        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_AdjustTo`
+        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autosnap`
         this._updateModeType()
     }
 
@@ -24,9 +24,9 @@ export class AdjustTo extends maptalks.Class {
         if (layer instanceof maptalks.VectorLayer) {
             const map = layer.map
             this._addTo(map)
-            this.adjustlayer = layer
-            this.adjustlayer.on('addgeo', () => this._updateGeosSet(), this)
-            this.adjustlayer.on('clear', () => this._resetGeosSet(), this)
+            this.snaplayer = layer
+            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
+            this.snaplayer.on('clear', () => this._resetGeosSet(), this)
             this.bindDrawTool(map._map_tool)
         }
         return this
@@ -48,7 +48,7 @@ export class AdjustTo extends maptalks.Class {
             const layer = geometry._layer
             const map = layer.map
             this._addTo(map)
-            this.adjustlayer = layer
+            this.snaplayer = layer
             this.bindGeometry(geometry)
         }
         return this
@@ -120,7 +120,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this.adjustlayer.getGeometries()
+        const geometries = this.snaplayer.getGeometries()
         const modeAuto = this._mode === 'auto'
         const modeVertux = this._mode === 'vertux'
         const modeBorder = this._mode === 'border'
@@ -173,18 +173,22 @@ export class AdjustTo extends maptalks.Class {
     _parsePolygonToLine(geo) {
         const coordinates = geo.getCoordinates()
         let geos = []
-        switch (geo.type) {
-            case 'MultiPolygon':
-                coordinates.forEach((coords) =>
-                    coords.forEach((coordsItem) => geos.push(...this._createLine(coordsItem, geo)))
-                )
-                break
-            case 'Polygon':
-                coordinates.forEach((coords) => geos.push(...this._createLine(coords, geo)))
-                break
-            default:
-                geos.push(...this._createLine(coordinates, geo))
-                break
+        if (coordinates instanceof Array) {
+            switch (geo.type) {
+                case 'MultiPolygon':
+                    coordinates.forEach((coords) =>
+                        coords.forEach((coordsItem) =>
+                            geos.push(...this._createLine(coordsItem, geo))
+                        )
+                    )
+                    break
+                case 'Polygon':
+                    coordinates.forEach((coords) => geos.push(...this._createLine(coords, geo)))
+                    break
+                default:
+                    geos.push(...this._createLine(coordinates, geo))
+                    break
+            }
         }
         return geos
     }
@@ -240,18 +244,18 @@ export class AdjustTo extends maptalks.Class {
                 symbol: {}
             }).addTo(this._mousemoveLayer)
 
-        this._updateAdjustPoint(coordinate)
+        this._updateSnapPoint(coordinate)
     }
 
-    _updateAdjustPoint(coordinate) {
+    _updateSnapPoint(coordinate) {
         if (this._needFindGeometry) {
             const availGeos = this._findGeometry(coordinate)
 
-            this.adjustPoint =
-                availGeos && availGeos.features.length > 0 ? this._getAdjustPoint(availGeos) : null
+            this.snapPoint =
+                availGeos && availGeos.features.length > 0 ? this._getSnapPoint(availGeos) : null
 
-            if (this.adjustPoint) {
-                const { x, y } = this.adjustPoint
+            if (this.snapPoint) {
+                const { x, y } = this.snapPoint
                 this._marker.setCoordinates([x, y])
             }
         }
@@ -293,7 +297,7 @@ export class AdjustTo extends maptalks.Class {
         return map.pointToCoordinate(new maptalks.Point(point), zoom)
     }
 
-    _getAdjustPoint(availGeos) {
+    _getSnapPoint(availGeos) {
         const nearestFeature = this._findNearestFeatures(availGeos.features)
         if (!nearestFeature) return null
         const { geoObject } = nearestFeature
@@ -445,8 +449,8 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _resetCoordinates(geo) {
-        if (this.adjustPoint) {
-            const { x, y } = this.adjustPoint
+        if (this.snapPoint) {
+            const { x, y } = this.snapPoint
             const coords = geo.getCoordinates()
             const { length } = coords
             if (length) {
@@ -459,8 +463,8 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _resetClickPoint(clickCoords) {
-        if (this.adjustPoint) {
-            const { x, y } = this.adjustPoint
+        if (this.snapPoint) {
+            const { x, y } = this.snapPoint
             const { length } = clickCoords
             clickCoords[length - 1].x = x
             clickCoords[length - 1].y = y
@@ -468,10 +472,10 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _setEditCoordinates(geo) {
-        if (this.adjustPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
-            const { x, y } = this.adjustPoint
+        if (this.snapPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
+            const { x, y } = this.snapPoint
             const coordsOld0 = this.geometryCoords[0]
-            if (!includes(coordsOld0, this.adjustPoint)) {
+            if (!includes(coordsOld0, this.snapPoint)) {
                 const coords = geo.getCoordinates()
                 const coords0 = coords[0]
                 const { length } = coords0
@@ -498,4 +502,4 @@ export class AdjustTo extends maptalks.Class {
     }
 }
 
-AdjustTo.mergeOptions(options)
+Autosnap.mergeOptions(options)

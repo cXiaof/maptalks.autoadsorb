@@ -14,7 +14,7 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-const adjust = new maptalks.AdjustTo().setLayer(layerSketch)
+const adjust = new maptalks.Autosnap().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
@@ -60,36 +60,3 @@ const toolbar = new maptalks.control.Toolbar({
         }
     ]
 }).addTo(map)
-
-const multi = new maptalks.MultiPolygon([
-    [
-        [
-            { x: 121.3878583068847, y: 31.143325869261 },
-            { x: 121.3893174285888, y: 31.126501934606 },
-            { x: 121.4075993652343, y: 31.128999999999 },
-            { x: 121.4036511535644, y: 31.145603115791 },
-            { x: 121.3878583068847, y: 31.143325869261 }
-        ]
-    ],
-    [
-        [
-            { x: 121.4088009948729, y: 31.144501229139 },
-            { x: 121.4144658203124, y: 31.127824448008 },
-            { x: 121.4330910797118, y: 31.131497999618 },
-            { x: 121.4240788574218, y: 31.149569801702 },
-            { x: 121.4088009948729, y: 31.144501229139 }
-        ]
-    ]
-])
-multi.addTo(layerSketch)
-multi.on('contextmenu', () => {
-    const isEditing = multi.isEditing()
-    if (isEditing) {
-        adjust.setLayer(layerSketch)
-        multi.endEdit()
-    }
-    if (!isEditing) {
-        adjust.setGeometry(multi)
-        multi.startEdit()
-    }
-})

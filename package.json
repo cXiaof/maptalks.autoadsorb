@@ -1,5 +1,5 @@
 {
-  "name": "maptalks.adjustto",
+  "name": "maptalks.autosnap",
   "version": "0.2.0 beta",
   "description": "",
   "license": "MIT",
@@ -7,7 +7,7 @@
     "type": "git",
     "url": ""
   },
-  "main": "dist/maptalks.adjustto.js",
+  "main": "dist/maptalks.autosnap.js",
   "scripts": {
     "version": "gulp minify && git add -A dist",
     "prepublish": "gulp minify",
