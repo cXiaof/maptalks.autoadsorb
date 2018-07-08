@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.2.0
+ * maptalks.autoadsorb v0.1.0-beta
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -6721,6 +6721,16 @@ var Autoadsorb = function (_maptalks$Class) {
                     geos.push.apply(geos, this._createLine(coordinates, geo));
                     break;
             }
+        } else if (geo.type === 'Polygon') {
+            coordinates = geo.toGeoJSON().geometry.coordinates[0];
+            var coords = [];
+            coordinates.forEach(function (coord) {
+                var x = coord[0],
+                    y = coord[1];
+
+                coords.push({ x: x, y: y });
+            });
+            geos.push.apply(geos, this._createMarkers(coords));
         }
         return geos;
     };
@@ -7119,6 +7129,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.2.0');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta');
 
 })));

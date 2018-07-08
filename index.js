@@ -171,7 +171,7 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _parsePolygonToLine(geo) {
-        const coordinates = geo.getCoordinates()
+        let coordinates = geo.getCoordinates()
         let geos = []
         if (coordinates instanceof Array) {
             switch (geo.type) {
@@ -189,6 +189,14 @@ export class Autoadsorb extends maptalks.Class {
                     geos.push(...this._createLine(coordinates, geo))
                     break
             }
+        } else if (geo.type === 'Polygon') {
+            coordinates = geo.toGeoJSON().geometry.coordinates[0]
+            let coords = []
+            coordinates.forEach((coord) => {
+                const [x, y] = coord
+                coords.push({ x, y })
+            })
+            geos.push(...this._createMarkers(coords))
         }
         return geos
     }
