@@ -154,10 +154,10 @@ export class Autoadsorb extends maptalks.Class {
         return false
     }
 
-    _createMarkers(coords) {
+    _createMarkers(coords, properties = {}) {
         const markers = []
         flattenDeep(coords).forEach((coord) =>
-            markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
+            markers.push(new maptalks.Marker(coord, { properties }).toGeoJSON())
         )
         return markers
     }
@@ -196,7 +196,7 @@ export class Autoadsorb extends maptalks.Class {
                 const [x, y] = coord
                 coords.push({ x, y })
             })
-            geos.push(...this._createMarkers(coords))
+            geos.push(...this._createMarkers(coords, { obj: geo }))
         }
         return geos
     }
@@ -206,7 +206,7 @@ export class Autoadsorb extends maptalks.Class {
         for (let i = 0; i < coords.length - 1; i++) {
             const x = coords[i]
             const y = coords[i + 1]
-            const line = new maptalks.LineString([x, y], { properties: { obj: geo } })
+            const line = new maptalks.LineString([x, y])
             lines.push(line.toGeoJSON())
         }
         return lines
@@ -309,11 +309,17 @@ export class Autoadsorb extends maptalks.Class {
         const nearestFeature = this._findNearestFeatures(availGeos.features)
         if (!nearestFeature) return null
         const { geoObject } = nearestFeature
-        const { coordinates, type } = geoObject.geometry
+        const { geometry, properties } = geoObject
+        const { coordinates, type } = geometry
         const coords0 = coordinates[0]
         switch (type) {
             case 'Point':
-                return { x: coords0, y: coordinates[1] }
+                if (properties && properties.obj) {
+                    const [x, y] = properties.obj.properties.coordinates
+                    return { x, y }
+                } else {
+                    return { x: coords0, y: coordinates[1] }
+                }
             case 'LineString':
                 const nearestLine = this._setEquation(geoObject)
                 const { A, B } = nearestLine
@@ -346,11 +352,13 @@ export class Autoadsorb extends maptalks.Class {
         })
         for (let i = 0; i < features.length; i++) {
             const geoObject = features[i]
-            const { type } = geoObject.geometry
+            const { geometry, properties } = geoObject
+            const { type } = geometry
             let distance
             switch (type) {
                 case 'Point':
-                    distance = this._distToPoint(geoObject)
+                    if (properties && properties.obj) distance = this._distToCircle(properties.obj)
+                    else distance = this._distToPoint(geoObject)
                     break
                 case 'LineString':
                     if (noPoint) distance = this._distToPolyline(geoObject)
@@ -361,6 +369,52 @@ export class Autoadsorb extends maptalks.Class {
             if (distance !== undefined) geoObjects.push({ geoObject, distance })
         }
         return geoObjects
+    }
+
+    _distToCircle(geo) {
+        const r = this._caclCircleRadius(geo)
+        console.log(r)
+        const coords = geo.getCoordinates()
+        const x0 = coords.x
+        const y0 = coords.y
+
+        const x1 = this._mousePoint.x
+        const y1 = this._mousePoint.y
+
+        let dx = x1 - x0
+        const dy = y1 - y0
+        if (dx === 0 && dy === 0) dx = 1
+        const d = Math.sqrt(dx * dx + dy * dy)
+
+        const x = x0 + (r * dx) / d
+        const y = y0 + (r * dy) / d
+        console.log(dx, dy, x, y)
+        const coordinates = [x, y]
+        geo.setProperties({ coordinates })
+
+        return this._distToPoint({ geometry: { coordinates } })
+    }
+
+    _caclCircleRadius(geo) {
+        const coordinates = geo.toGeoJSON().geometry.coordinates[0]
+        let xMin = coordinates[0][0]
+        let xMax = coordinates[0][0]
+        let yMin = coordinates[0][1]
+        let yMax = coordinates[0][1]
+        coordinates.forEach((coords) => {
+            const [x, y] = coords
+            if (xMin > x) {
+                xMin = x
+                yMin = y
+            }
+            if (xMax < x) {
+                xMax = x
+                yMax = y
+            }
+        })
+        const dx = xMax - xMin
+        const dy = yMax - yMin
+        return Math.abs(Math.sqrt(dx * dx + dy * dy)) / 2
     }
 
     _distToPoint(feature) {
