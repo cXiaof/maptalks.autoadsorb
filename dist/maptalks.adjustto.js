@@ -6557,6 +6557,7 @@ var AdjustTo = function (_maptalks$Class) {
             }, this);
             if (drawTool.isEnabled()) this.enable();
         }
+        return this;
     };
 
     AdjustTo.prototype.setGeometry = function setGeometry(geometry) {
@@ -6576,7 +6577,6 @@ var AdjustTo = function (_maptalks$Class) {
         if (geometry instanceof maptalks.Geometry) {
             this.geometry = geometry;
             this.geometryCoords = geometry.getCoordinates();
-            this.isMultigeo = geometry.type === 'MultiPolygon';
             geometry.on('editstart', function (e) {
                 return _this4.enable();
             }, this);
@@ -6588,6 +6588,7 @@ var AdjustTo = function (_maptalks$Class) {
             }, this);
             geometry.startEdit().endEdit();
         }
+        return this;
     };
 
     AdjustTo.prototype.enable = function enable() {
@@ -6603,12 +6604,12 @@ var AdjustTo = function (_maptalks$Class) {
         this._offMapEvents();
         this._offDrawToolEvents();
         this._offGeometryEvents();
+        this._resetGeosSet();
 
         delete this._mousemove;
         delete this._mousedown;
         delete this._mouseup;
         if (this._mousemoveLayer) this._mousemoveLayer.hide();
-        this._resetGeosSet();
         return this;
     };
 
@@ -6647,15 +6648,13 @@ var AdjustTo = function (_maptalks$Class) {
         var _this5 = this;
 
         var geometries = this.adjustlayer.getGeometries();
+        var modeAuto = this._mode === 'auto';
+        var modeVertux = this._mode === 'vertux';
+        var modeBorder = this._mode === 'border';
         var geos = [];
         geometries.forEach(function (geo) {
-            var geoArr = [];
-            var modeAuto = _this5._mode === 'auto';
-            var modeVertux = _this5._mode === 'vertux';
-            var modeBorder = _this5._mode === 'border';
-            if (modeAuto || modeVertux) geoArr.push.apply(geoArr, _this5._parseToPoints(geo));
-            if (modeAuto || modeBorder) geoArr.push.apply(geoArr, _this5._parseToLines(geo));
-            geos.push.apply(geos, geoArr);
+            if (modeAuto || modeVertux) geos.push.apply(geos, _this5._parseToPoints(geo));
+            if (modeAuto || modeBorder) geos.push.apply(geos, _this5._parseToLines(geo));
         });
         this._geosSet = geos;
     };
@@ -6695,11 +6694,7 @@ var AdjustTo = function (_maptalks$Class) {
     AdjustTo.prototype._parseToLines = function _parseToLines(geo) {
         if (this._skipGeoSelf(geo)) return [];
         var geos = [];
-        if (geo.getType() === 'Point') {
-            var feature = geo.toGeoJSON();
-            feature.properties = {};
-            geos.push(feature);
-        } else geos.push.apply(geos, this._parsePolygonToLine(geo));
+        if (geo.type === 'Point') geos.push(geo.setProperties({}).toGeoJSON());else geos.push.apply(geos, this._parsePolygonToLine(geo));
         return geos;
     };
 
@@ -6806,8 +6801,8 @@ var AdjustTo = function (_maptalks$Class) {
             var features = this._geosSet;
             this.tree.clear();
             this.tree.load({ type: 'FeatureCollection', features: features });
-            this.inspectExtent = this._createInspectExtent(coordinate);
-            var availGeos = this.tree.search(this.inspectExtent);
+            var inspectExtent = this._createInspectExtent(coordinate);
+            var availGeos = this.tree.search(inspectExtent);
             return availGeos;
         }
         return null;
@@ -6871,48 +6866,6 @@ var AdjustTo = function (_maptalks$Class) {
         }
     };
 
-    AdjustTo.prototype._setEquation = function _setEquation(geoObject) {
-        var _geoObject$geometry$c = geoObject.geometry.coordinates,
-            from = _geoObject$geometry$c[0],
-            to = _geoObject$geometry$c[1];
-        var fromX = from[0],
-            fromY = from[1];
-        var toX = to[0],
-            toY = to[1];
-
-        var k = (fromY - toY) / (fromX - toX);
-        k = k === -Infinity ? -k : k;
-        return {
-            A: k,
-            B: -1,
-            C: fromY - k * fromX
-        };
-    };
-
-    AdjustTo.prototype._setVertiEquation = function _setVertiEquation(k) {
-        var _mousePoint2 = this._mousePoint,
-            x = _mousePoint2.x,
-            y = _mousePoint2.y;
-
-        return {
-            A: k,
-            B: -1,
-            C: y - k * x
-        };
-    };
-
-    AdjustTo.prototype._solveEquation = function _solveEquation(equationW, equationU) {
-        var A1 = equationW.A;
-        var B1 = equationW.B;
-        var C1 = equationW.C;
-        var A2 = equationU.A;
-        var B2 = equationU.B;
-        var C2 = equationU.C;
-        var x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1);
-        var y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1);
-        return { x: x, y: y };
-    };
-
     AdjustTo.prototype._findNearestFeatures = function _findNearestFeatures(features) {
         var geoObjects = this._setDistance(features);
         if (geoObjects.length === 0) return null;
@@ -6949,9 +6902,9 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._distToPoint = function _distToPoint(feature) {
-        var _mousePoint3 = this._mousePoint,
-            x = _mousePoint3.x,
-            y = _mousePoint3.y;
+        var _mousePoint2 = this._mousePoint,
+            x = _mousePoint2.x,
+            y = _mousePoint2.y;
 
         var from = [x, y];
         var to = feature.geometry.coordinates;
@@ -6959,9 +6912,9 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._distToPolyline = function _distToPolyline(feature) {
-        var _mousePoint4 = this._mousePoint,
-            x = _mousePoint4.x,
-            y = _mousePoint4.y;
+        var _mousePoint3 = this._mousePoint,
+            x = _mousePoint3.x,
+            y = _mousePoint3.y;
 
         var _setEquation2 = this._setEquation(feature),
             A = _setEquation2.A,
@@ -6978,6 +6931,48 @@ var AdjustTo = function (_maptalks$Class) {
             var value2 = object2[propertyName];
             return value2 < value1;
         };
+    };
+
+    AdjustTo.prototype._setEquation = function _setEquation(geoObject) {
+        var _geoObject$geometry$c = geoObject.geometry.coordinates,
+            from = _geoObject$geometry$c[0],
+            to = _geoObject$geometry$c[1];
+        var fromX = from[0],
+            fromY = from[1];
+        var toX = to[0],
+            toY = to[1];
+
+        var k = (fromY - toY) / (fromX - toX);
+        k = k === -Infinity ? -k : k;
+        return {
+            A: k,
+            B: -1,
+            C: fromY - k * fromX
+        };
+    };
+
+    AdjustTo.prototype._setVertiEquation = function _setVertiEquation(k) {
+        var _mousePoint4 = this._mousePoint,
+            x = _mousePoint4.x,
+            y = _mousePoint4.y;
+
+        return {
+            A: k,
+            B: -1,
+            C: y - k * x
+        };
+    };
+
+    AdjustTo.prototype._solveEquation = function _solveEquation(equationW, equationU) {
+        var A1 = equationW.A;
+        var B1 = equationW.B;
+        var C1 = equationW.C;
+        var A2 = equationU.A;
+        var B2 = equationU.B;
+        var C2 = equationU.C;
+        var x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1);
+        var y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1);
+        return { x: x, y: y };
     };
 
     AdjustTo.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
@@ -7080,7 +7075,7 @@ var AdjustTo = function (_maptalks$Class) {
     };
 
     AdjustTo.prototype._setEditCoordinates = function _setEditCoordinates(geo) {
-        if (this.adjustPoint && this._needDeal && !isMultigeo) {
+        if (this.adjustPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
             var _adjustPoint4 = this.adjustPoint,
                 x = _adjustPoint4.x,
                 y = _adjustPoint4.y;

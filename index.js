@@ -40,6 +40,7 @@ export class AdjustTo extends maptalks.Class {
             drawTool.on('remove', (e) => this.remove(), this)
             if (drawTool.isEnabled()) this.enable()
         }
+        return this
     }
 
     setGeometry(geometry) {
@@ -57,12 +58,12 @@ export class AdjustTo extends maptalks.Class {
         if (geometry instanceof maptalks.Geometry) {
             this.geometry = geometry
             this.geometryCoords = geometry.getCoordinates()
-            this.isMultigeo = geometry.type === 'MultiPolygon'
             geometry.on('editstart', (e) => this.enable(), this)
             geometry.on('editend', (e) => this.disable(), this)
             geometry.on('remove', (e) => this.remove(), this)
             geometry.startEdit().endEdit()
         }
+        return this
     }
 
     enable() {
@@ -78,12 +79,12 @@ export class AdjustTo extends maptalks.Class {
         this._offMapEvents()
         this._offDrawToolEvents()
         this._offGeometryEvents()
+        this._resetGeosSet()
 
         delete this._mousemove
         delete this._mousedown
         delete this._mouseup
         if (this._mousemoveLayer) this._mousemoveLayer.hide()
-        this._resetGeosSet()
         return this
     }
 
@@ -120,15 +121,13 @@ export class AdjustTo extends maptalks.Class {
 
     _updateGeosSet() {
         const geometries = this.adjustlayer.getGeometries()
+        const modeAuto = this._mode === 'auto'
+        const modeVertux = this._mode === 'vertux'
+        const modeBorder = this._mode === 'border'
         let geos = []
         geometries.forEach((geo) => {
-            let geoArr = []
-            const modeAuto = this._mode === 'auto'
-            const modeVertux = this._mode === 'vertux'
-            const modeBorder = this._mode === 'border'
-            if (modeAuto || modeVertux) geoArr.push(...this._parseToPoints(geo))
-            if (modeAuto || modeBorder) geoArr.push(...this._parseToLines(geo))
-            geos.push(...geoArr)
+            if (modeAuto || modeVertux) geos.push(...this._parseToPoints(geo))
+            if (modeAuto || modeBorder) geos.push(...this._parseToLines(geo))
         })
         this._geosSet = geos
     }
@@ -166,11 +165,8 @@ export class AdjustTo extends maptalks.Class {
     _parseToLines(geo) {
         if (this._skipGeoSelf(geo)) return []
         let geos = []
-        if (geo.getType() === 'Point') {
-            const feature = geo.toGeoJSON()
-            feature.properties = {}
-            geos.push(feature)
-        } else geos.push(...this._parsePolygonToLine(geo))
+        if (geo.type === 'Point') geos.push(geo.setProperties({}).toGeoJSON())
+        else geos.push(...this._parsePolygonToLine(geo))
         return geos
     }
 
@@ -266,8 +262,8 @@ export class AdjustTo extends maptalks.Class {
             const features = this._geosSet
             this.tree.clear()
             this.tree.load({ type: 'FeatureCollection', features })
-            this.inspectExtent = this._createInspectExtent(coordinate)
-            const availGeos = this.tree.search(this.inspectExtent)
+            const inspectExtent = this._createInspectExtent(coordinate)
+            const availGeos = this.tree.search(inspectExtent)
             return availGeos
         }
         return null
@@ -320,40 +316,6 @@ export class AdjustTo extends maptalks.Class {
             default:
                 return null
         }
-    }
-
-    _setEquation(geoObject) {
-        const [from, to] = geoObject.geometry.coordinates
-        const [fromX, fromY] = from
-        const [toX, toY] = to
-        let k = (fromY - toY) / (fromX - toX)
-        k = k === -Infinity ? -k : k
-        return {
-            A: k,
-            B: -1,
-            C: fromY - k * fromX
-        }
-    }
-
-    _setVertiEquation(k) {
-        const { x, y } = this._mousePoint
-        return {
-            A: k,
-            B: -1,
-            C: y - k * x
-        }
-    }
-
-    _solveEquation(equationW, equationU) {
-        const A1 = equationW.A
-        const B1 = equationW.B
-        const C1 = equationW.C
-        const A2 = equationU.A
-        const B2 = equationU.B
-        const C2 = equationU.C
-        const x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1)
-        const y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1)
-        return { x, y }
     }
 
     _findNearestFeatures(features) {
@@ -409,6 +371,40 @@ export class AdjustTo extends maptalks.Class {
             const value2 = object2[propertyName]
             return value2 < value1
         }
+    }
+
+    _setEquation(geoObject) {
+        const [from, to] = geoObject.geometry.coordinates
+        const [fromX, fromY] = from
+        const [toX, toY] = to
+        let k = (fromY - toY) / (fromX - toX)
+        k = k === -Infinity ? -k : k
+        return {
+            A: k,
+            B: -1,
+            C: fromY - k * fromX
+        }
+    }
+
+    _setVertiEquation(k) {
+        const { x, y } = this._mousePoint
+        return {
+            A: k,
+            B: -1,
+            C: y - k * x
+        }
+    }
+
+    _solveEquation(equationW, equationU) {
+        const A1 = equationW.A
+        const B1 = equationW.B
+        const C1 = equationW.C
+        const A2 = equationU.A
+        const B2 = equationU.B
+        const C2 = equationU.C
+        const x = (B1 * C2 - C1 * B2) / (A1 * B2 - A2 * B1)
+        const y = (A1 * C2 - A2 * C1) / (B1 * A2 - B2 * A1)
+        return { x, y }
     }
 
     _registerDrawToolEvents() {
@@ -472,7 +468,7 @@ export class AdjustTo extends maptalks.Class {
     }
 
     _setEditCoordinates(geo) {
-        if (this.adjustPoint && this._needDeal && !isMultigeo) {
+        if (this.adjustPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
             const { x, y } = this.adjustPoint
             const coordsOld0 = this.geometryCoords[0]
             if (!includes(coordsOld0, this.adjustPoint)) {
