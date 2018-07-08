@@ -1,13 +1,9 @@
 /*!
- * maptalks.autosnap v0.2.0 beta
+ * maptalks.autoadsorb v0.2.0
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
-	typeof define === 'function' && define.amd ? define(['exports', 'maptalks'], factory) :
-	(factory((global.maptalks = global.maptalks || {}),global.maptalks));
-}(this, (function (exports,maptalks) { 'use strict';
+import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, LineString, Marker, Point, VectorLayer } from 'maptalks';
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -6508,32 +6504,32 @@ var options = {
     distance: 10
 };
 
-var Autosnap = function (_maptalks$Class) {
-    _inherits(Autosnap, _maptalks$Class);
+var Autoadsorb = function (_maptalks$Class) {
+    _inherits(Autoadsorb, _maptalks$Class);
 
-    function Autosnap(options) {
-        _classCallCheck(this, Autosnap);
+    function Autoadsorb(options) {
+        _classCallCheck(this, Autoadsorb);
 
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
         _this.tree = geojsonRbush_1();
         _this._distance = Math.max(_this.options['distance'] || options.distance, 1);
-        _this._layerName = maptalks.INTERNAL_LAYER_PREFIX + '_Autosnap';
+        _this._layerName = INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._updateModeType();
         return _this;
     }
 
-    Autosnap.prototype.setLayer = function setLayer(layer) {
+    Autoadsorb.prototype.setLayer = function setLayer(layer) {
         var _this2 = this;
 
-        if (layer instanceof maptalks.VectorLayer) {
+        if (layer instanceof VectorLayer) {
             var _map = layer.map;
             this._addTo(_map);
-            this.snaplayer = layer;
-            this.snaplayer.on('addgeo', function () {
+            this.adsorblayer = layer;
+            this.adsorblayer.on('addgeo', function () {
                 return _this2._updateGeosSet();
             }, this);
-            this.snaplayer.on('clear', function () {
+            this.adsorblayer.on('clear', function () {
                 return _this2._resetGeosSet();
             }, this);
             this.bindDrawTool(_map._map_tool);
@@ -6541,10 +6537,10 @@ var Autosnap = function (_maptalks$Class) {
         return this;
     };
 
-    Autosnap.prototype.bindDrawTool = function bindDrawTool(drawTool) {
+    Autoadsorb.prototype.bindDrawTool = function bindDrawTool(drawTool) {
         var _this3 = this;
 
-        if (drawTool instanceof maptalks.DrawTool) {
+        if (drawTool instanceof DrawTool) {
             this.drawTool = drawTool;
             drawTool.on('enable', function (e) {
                 return _this3.enable();
@@ -6560,21 +6556,21 @@ var Autosnap = function (_maptalks$Class) {
         return this;
     };
 
-    Autosnap.prototype.setGeometry = function setGeometry(geometry) {
-        if (geometry instanceof maptalks.Geometry) {
+    Autoadsorb.prototype.setGeometry = function setGeometry(geometry) {
+        if (geometry instanceof Geometry) {
             var layer = geometry._layer;
             var _map2 = layer.map;
             this._addTo(_map2);
-            this.snaplayer = layer;
+            this.adsorblayer = layer;
             this.bindGeometry(geometry);
         }
         return this;
     };
 
-    Autosnap.prototype.bindGeometry = function bindGeometry(geometry) {
+    Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
         var _this4 = this;
 
-        if (geometry instanceof maptalks.Geometry) {
+        if (geometry instanceof Geometry) {
             this.geometry = geometry;
             this.geometryCoords = geometry.getCoordinates();
             geometry.on('editstart', function (e) {
@@ -6591,7 +6587,7 @@ var Autosnap = function (_maptalks$Class) {
         return this;
     };
 
-    Autosnap.prototype.enable = function enable() {
+    Autoadsorb.prototype.enable = function enable() {
         this._updateGeosSet();
         this._registerMapEvents();
         if (this.drawTool) this._registerDrawToolEvents();
@@ -6600,7 +6596,7 @@ var Autosnap = function (_maptalks$Class) {
         return this;
     };
 
-    Autosnap.prototype.disable = function disable() {
+    Autoadsorb.prototype.disable = function disable() {
         this._offMapEvents();
         this._offDrawToolEvents();
         this._offGeometryEvents();
@@ -6613,41 +6609,41 @@ var Autosnap = function (_maptalks$Class) {
         return this;
     };
 
-    Autosnap.prototype.remove = function remove() {
+    Autoadsorb.prototype.remove = function remove() {
         this.disable();
         var layer = map.getLayer(this._layerName);
         if (layer) layer.remove();
         delete this._mousemoveLayer;
     };
 
-    Autosnap.prototype.setMode = function setMode(mode) {
+    Autoadsorb.prototype.setMode = function setMode(mode) {
         this._updateModeType(mode);
         this._updateGeosSet();
         return this;
     };
 
-    Autosnap.prototype.getMode = function getMode() {
+    Autoadsorb.prototype.getMode = function getMode() {
         return this._mode;
     };
 
-    Autosnap.prototype._updateModeType = function _updateModeType(mode) {
+    Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
         this._mode = mode || this.options['mode'] || options.mode;
     };
 
-    Autosnap.prototype._addTo = function _addTo(map) {
+    Autoadsorb.prototype._addTo = function _addTo(map) {
         var _layer = map.getLayer(this._layerName);
         if (_layer) this.remove();
-        this._mousemoveLayer = new maptalks.VectorLayer(this._layerName).addTo(map);
+        this._mousemoveLayer = new VectorLayer(this._layerName).addTo(map);
         this._mousemoveLayer.bringToFront();
         this._map = map;
         this._resetGeosSet();
         return this;
     };
 
-    Autosnap.prototype._updateGeosSet = function _updateGeosSet() {
+    Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
         var _this5 = this;
 
-        var geometries = this.snaplayer.getGeometries();
+        var geometries = this.adsorblayer.getGeometries();
         var modeAuto = this._mode === 'auto';
         var modeVertux = this._mode === 'vertux';
         var modeBorder = this._mode === 'border';
@@ -6659,7 +6655,7 @@ var Autosnap = function (_maptalks$Class) {
         this._geosSet = geos;
     };
 
-    Autosnap.prototype._parseToPoints = function _parseToPoints(geo) {
+    Autoadsorb.prototype._parseToPoints = function _parseToPoints(geo) {
         var _this6 = this;
 
         if (this._skipGeoSelf(geo)) return [];
@@ -6674,7 +6670,7 @@ var Autosnap = function (_maptalks$Class) {
         return geos;
     };
 
-    Autosnap.prototype._skipGeoSelf = function _skipGeoSelf(geo) {
+    Autoadsorb.prototype._skipGeoSelf = function _skipGeoSelf(geo) {
         if (this.geometry) {
             var coordsNow = geo.toGeoJSON().geometry.coordinates;
             var coordsThis = this.geometry.toGeoJSON().geometry.coordinates;
@@ -6683,22 +6679,22 @@ var Autosnap = function (_maptalks$Class) {
         return false;
     };
 
-    Autosnap.prototype._createMarkers = function _createMarkers(coords) {
+    Autoadsorb.prototype._createMarkers = function _createMarkers(coords) {
         var markers = [];
         flattenDeep_1(coords).forEach(function (coord) {
-            return markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON());
+            return markers.push(new Marker(coord, { properties: {} }).toGeoJSON());
         });
         return markers;
     };
 
-    Autosnap.prototype._parseToLines = function _parseToLines(geo) {
+    Autoadsorb.prototype._parseToLines = function _parseToLines(geo) {
         if (this._skipGeoSelf(geo)) return [];
         var geos = [];
         if (geo.type === 'Point') geos.push(geo.setProperties({}).toGeoJSON());else geos.push.apply(geos, this._parsePolygonToLine(geo));
         return geos;
     };
 
-    Autosnap.prototype._parsePolygonToLine = function _parsePolygonToLine(geo) {
+    Autoadsorb.prototype._parsePolygonToLine = function _parsePolygonToLine(geo) {
         var _this7 = this;
 
         var coordinates = geo.getCoordinates();
@@ -6725,22 +6721,22 @@ var Autosnap = function (_maptalks$Class) {
         return geos;
     };
 
-    Autosnap.prototype._createLine = function _createLine(coords, geo) {
+    Autoadsorb.prototype._createLine = function _createLine(coords, geo) {
         var lines = [];
         for (var i = 0; i < coords.length - 1; i++) {
             var x = coords[i];
             var y = coords[i + 1];
-            var line = new maptalks.LineString([x, y], { properties: { obj: geo } });
+            var line = new LineString([x, y], { properties: { obj: geo } });
             lines.push(line.toGeoJSON());
         }
         return lines;
     };
 
-    Autosnap.prototype._resetGeosSet = function _resetGeosSet() {
+    Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {
         this._geosSet = [];
     };
 
-    Autosnap.prototype._registerMapEvents = function _registerMapEvents() {
+    Autoadsorb.prototype._registerMapEvents = function _registerMapEvents() {
         var _this8 = this;
 
         if (!this._mousemove) {
@@ -6762,43 +6758,43 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._offMapEvents = function _offMapEvents() {
+    Autoadsorb.prototype._offMapEvents = function _offMapEvents() {
         var map = this._map;
         if (this._mousemove) map.off('mousemove touchstart', this._mousemove, this);
         if (this._mousedown) map.off('mousedown', this._mousedown, this);
         if (this._mouseup) map.off('mouseup', this._mouseup, this);
     };
 
-    Autosnap.prototype._mousemoveEvents = function _mousemoveEvents(event) {
+    Autoadsorb.prototype._mousemoveEvents = function _mousemoveEvents(event) {
         var coordinate = event.coordinate;
 
         this._needDeal = true;
         this._mousePoint = coordinate;
 
-        if (this._marker) this._marker.setCoordinates(coordinate);else this._marker = new maptalks.Marker(coordinate, {
+        if (this._marker) this._marker.setCoordinates(coordinate);else this._marker = new Marker(coordinate, {
             symbol: {}
         }).addTo(this._mousemoveLayer);
 
-        this._updateSnapPoint(coordinate);
+        this._updateAdsorbPoint(coordinate);
     };
 
-    Autosnap.prototype._updateSnapPoint = function _updateSnapPoint(coordinate) {
+    Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
         if (this._needFindGeometry) {
             var availGeos = this._findGeometry(coordinate);
 
-            this.snapPoint = availGeos && availGeos.features.length > 0 ? this._getSnapPoint(availGeos) : null;
+            this.adsorbPoint = availGeos && availGeos.features.length > 0 ? this._getAdsorbPoint(availGeos) : null;
 
-            if (this.snapPoint) {
-                var _snapPoint = this.snapPoint,
-                    x = _snapPoint.x,
-                    y = _snapPoint.y;
+            if (this.adsorbPoint) {
+                var _adsorbPoint = this.adsorbPoint,
+                    x = _adsorbPoint.x,
+                    y = _adsorbPoint.y;
 
                 this._marker.setCoordinates([x, y]);
             }
         }
     };
 
-    Autosnap.prototype._findGeometry = function _findGeometry(coordinate) {
+    Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {
         if (this._geosSet) {
             var features = this._geosSet;
             this.tree.clear();
@@ -6810,7 +6806,7 @@ var Autosnap = function (_maptalks$Class) {
         return null;
     };
 
-    Autosnap.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
+    Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
         var distance = this._distance;
         var map = this._map;
         var zoom = map.getZoom();
@@ -6833,12 +6829,12 @@ var Autosnap = function (_maptalks$Class) {
         };
     };
 
-    Autosnap.prototype._pointToCoordinateWithZoom = function _pointToCoordinateWithZoom(point, zoom) {
+    Autoadsorb.prototype._pointToCoordinateWithZoom = function _pointToCoordinateWithZoom(point, zoom) {
         var map = this._map;
-        return map.pointToCoordinate(new maptalks.Point(point), zoom);
+        return map.pointToCoordinate(new Point(point), zoom);
     };
 
-    Autosnap.prototype._getSnapPoint = function _getSnapPoint(availGeos) {
+    Autoadsorb.prototype._getAdsorbPoint = function _getAdsorbPoint(availGeos) {
         var nearestFeature = this._findNearestFeatures(availGeos.features);
         if (!nearestFeature) return null;
         var geoObject = nearestFeature.geoObject;
@@ -6868,14 +6864,14 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._findNearestFeatures = function _findNearestFeatures(features) {
+    Autoadsorb.prototype._findNearestFeatures = function _findNearestFeatures(features) {
         var geoObjects = this._setDistance(features);
         if (geoObjects.length === 0) return null;
         geoObjects = geoObjects.sort(this._compare(geoObjects, 'distance'));
         return geoObjects[0];
     };
 
-    Autosnap.prototype._setDistance = function _setDistance(features) {
+    Autoadsorb.prototype._setDistance = function _setDistance(features) {
         var geoObjects = [];
         var noPoint = true;
         features.forEach(function (geo) {
@@ -6903,7 +6899,7 @@ var Autosnap = function (_maptalks$Class) {
         return geoObjects;
     };
 
-    Autosnap.prototype._distToPoint = function _distToPoint(feature) {
+    Autoadsorb.prototype._distToPoint = function _distToPoint(feature) {
         var _mousePoint2 = this._mousePoint,
             x = _mousePoint2.x,
             y = _mousePoint2.y;
@@ -6913,7 +6909,7 @@ var Autosnap = function (_maptalks$Class) {
         return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2));
     };
 
-    Autosnap.prototype._distToPolyline = function _distToPolyline(feature) {
+    Autoadsorb.prototype._distToPolyline = function _distToPolyline(feature) {
         var _mousePoint3 = this._mousePoint,
             x = _mousePoint3.x,
             y = _mousePoint3.y;
@@ -6927,7 +6923,7 @@ var Autosnap = function (_maptalks$Class) {
         return distance;
     };
 
-    Autosnap.prototype._compare = function _compare(data, propertyName) {
+    Autoadsorb.prototype._compare = function _compare(data, propertyName) {
         return function (object1, object2) {
             var value1 = object1[propertyName];
             var value2 = object2[propertyName];
@@ -6935,7 +6931,7 @@ var Autosnap = function (_maptalks$Class) {
         };
     };
 
-    Autosnap.prototype._setEquation = function _setEquation(geoObject) {
+    Autoadsorb.prototype._setEquation = function _setEquation(geoObject) {
         var _geoObject$geometry$c = geoObject.geometry.coordinates,
             from = _geoObject$geometry$c[0],
             to = _geoObject$geometry$c[1];
@@ -6953,7 +6949,7 @@ var Autosnap = function (_maptalks$Class) {
         };
     };
 
-    Autosnap.prototype._setVertiEquation = function _setVertiEquation(k) {
+    Autoadsorb.prototype._setVertiEquation = function _setVertiEquation(k) {
         var _mousePoint4 = this._mousePoint,
             x = _mousePoint4.x,
             y = _mousePoint4.y;
@@ -6965,7 +6961,7 @@ var Autosnap = function (_maptalks$Class) {
         };
     };
 
-    Autosnap.prototype._solveEquation = function _solveEquation(equationW, equationU) {
+    Autoadsorb.prototype._solveEquation = function _solveEquation(equationW, equationU) {
         var A1 = equationW.A;
         var B1 = equationW.B;
         var C1 = equationW.C;
@@ -6977,7 +6973,7 @@ var Autosnap = function (_maptalks$Class) {
         return { x: x, y: y };
     };
 
-    Autosnap.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
+    Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
         var _this9 = this;
 
         var drawTool = this.drawTool;
@@ -6995,7 +6991,7 @@ var Autosnap = function (_maptalks$Class) {
         }, this);
     };
 
-    Autosnap.prototype._offDrawToolEvents = function _offDrawToolEvents() {
+    Autoadsorb.prototype._offDrawToolEvents = function _offDrawToolEvents() {
         var _this10 = this;
 
         if (this.drawTool) {
@@ -7015,7 +7011,7 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._registerGeometryEvents = function _registerGeometryEvents() {
+    Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {
         var _this11 = this;
 
         var geometry = this.geometry;
@@ -7027,7 +7023,7 @@ var Autosnap = function (_maptalks$Class) {
         }, this);
     };
 
-    Autosnap.prototype._offGeometryEvents = function _offGeometryEvents() {
+    Autoadsorb.prototype._offGeometryEvents = function _offGeometryEvents() {
         var _this12 = this;
 
         if (this.geometry) {
@@ -7041,16 +7037,16 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {
+    Autoadsorb.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {
         this._resetCoordinates(e.target._geometry);
         this._resetClickPoint(e.target._clickCoords);
     };
 
-    Autosnap.prototype._resetCoordinates = function _resetCoordinates(geo) {
-        if (this.snapPoint) {
-            var _snapPoint2 = this.snapPoint,
-                x = _snapPoint2.x,
-                y = _snapPoint2.y;
+    Autoadsorb.prototype._resetCoordinates = function _resetCoordinates(geo) {
+        if (this.adsorbPoint) {
+            var _adsorbPoint2 = this.adsorbPoint,
+                x = _adsorbPoint2.x,
+                y = _adsorbPoint2.y;
 
             var coords = geo.getCoordinates();
             var length = coords.length;
@@ -7064,11 +7060,11 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
-        if (this.snapPoint) {
-            var _snapPoint3 = this.snapPoint,
-                x = _snapPoint3.x,
-                y = _snapPoint3.y;
+    Autoadsorb.prototype._resetClickPoint = function _resetClickPoint(clickCoords) {
+        if (this.adsorbPoint) {
+            var _adsorbPoint3 = this.adsorbPoint,
+                x = _adsorbPoint3.x,
+                y = _adsorbPoint3.y;
             var length = clickCoords.length;
 
             clickCoords[length - 1].x = x;
@@ -7076,14 +7072,14 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._setEditCoordinates = function _setEditCoordinates(geo) {
-        if (this.snapPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
-            var _snapPoint4 = this.snapPoint,
-                x = _snapPoint4.x,
-                y = _snapPoint4.y;
+    Autoadsorb.prototype._setEditCoordinates = function _setEditCoordinates(geo) {
+        if (this.adsorbPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
+            var _adsorbPoint4 = this.adsorbPoint,
+                x = _adsorbPoint4.x,
+                y = _adsorbPoint4.y;
 
             var coordsOld0 = this.geometryCoords[0];
-            if (!includes_1(coordsOld0, this.snapPoint)) {
+            if (!includes_1(coordsOld0, this.adsorbPoint)) {
                 var coords = geo.getCoordinates();
                 var coords0 = coords[0];
                 var length = coords0.length;
@@ -7106,19 +7102,15 @@ var Autosnap = function (_maptalks$Class) {
         }
     };
 
-    Autosnap.prototype._upGeoCoords = function _upGeoCoords(coords) {
+    Autoadsorb.prototype._upGeoCoords = function _upGeoCoords(coords) {
         this.geometryCoords = coords;
     };
 
-    return Autosnap;
-}(maptalks.Class);
+    return Autoadsorb;
+}(Class);
 
-Autosnap.mergeOptions(options);
+Autoadsorb.mergeOptions(options);
 
-exports.Autosnap = Autosnap;
+export { Autoadsorb };
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
-typeof console !== 'undefined' && console.log('maptalks.autosnap v0.2.0 beta');
-
-})));
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.2.0');

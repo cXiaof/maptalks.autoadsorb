@@ -14,7 +14,7 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
 const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
 
-const adjust = new maptalks.Autosnap().setLayer(layerSketch)
+const adjust = new maptalks.Autoadsorb().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
@@ -32,7 +32,7 @@ drawTool.on('drawend', (param) => {
     })
 })
 
-const modesDraw = ['Point', 'LineString', 'Polygon', 'Circle', 'Ellipse', 'Rectangle']
+const modesDraw = ['Point', 'LineString', 'Polygon', 'Rectangle', 'Circle', 'Ellipse']
 let childrenDraw = []
 modesDraw.map((item) => childrenDraw.push({ item, click: () => drawTool.setMode(item).enable() }))
 

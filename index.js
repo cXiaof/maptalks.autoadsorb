@@ -11,12 +11,12 @@ const options = {
     distance: 10
 }
 
-export class Autosnap extends maptalks.Class {
+export class Autoadsorb extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
         this._distance = Math.max(this.options['distance'] || options.distance, 1)
-        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autosnap`
+        this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._updateModeType()
     }
 
@@ -24,9 +24,9 @@ export class Autosnap extends maptalks.Class {
         if (layer instanceof maptalks.VectorLayer) {
             const map = layer.map
             this._addTo(map)
-            this.snaplayer = layer
-            this.snaplayer.on('addgeo', () => this._updateGeosSet(), this)
-            this.snaplayer.on('clear', () => this._resetGeosSet(), this)
+            this.adsorblayer = layer
+            this.adsorblayer.on('addgeo', () => this._updateGeosSet(), this)
+            this.adsorblayer.on('clear', () => this._resetGeosSet(), this)
             this.bindDrawTool(map._map_tool)
         }
         return this
@@ -48,7 +48,7 @@ export class Autosnap extends maptalks.Class {
             const layer = geometry._layer
             const map = layer.map
             this._addTo(map)
-            this.snaplayer = layer
+            this.adsorblayer = layer
             this.bindGeometry(geometry)
         }
         return this
@@ -120,7 +120,7 @@ export class Autosnap extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this.snaplayer.getGeometries()
+        const geometries = this.adsorblayer.getGeometries()
         const modeAuto = this._mode === 'auto'
         const modeVertux = this._mode === 'vertux'
         const modeBorder = this._mode === 'border'
@@ -244,18 +244,18 @@ export class Autosnap extends maptalks.Class {
                 symbol: {}
             }).addTo(this._mousemoveLayer)
 
-        this._updateSnapPoint(coordinate)
+        this._updateAdsorbPoint(coordinate)
     }
 
-    _updateSnapPoint(coordinate) {
+    _updateAdsorbPoint(coordinate) {
         if (this._needFindGeometry) {
             const availGeos = this._findGeometry(coordinate)
 
-            this.snapPoint =
-                availGeos && availGeos.features.length > 0 ? this._getSnapPoint(availGeos) : null
+            this.adsorbPoint =
+                availGeos && availGeos.features.length > 0 ? this._getAdsorbPoint(availGeos) : null
 
-            if (this.snapPoint) {
-                const { x, y } = this.snapPoint
+            if (this.adsorbPoint) {
+                const { x, y } = this.adsorbPoint
                 this._marker.setCoordinates([x, y])
             }
         }
@@ -297,7 +297,7 @@ export class Autosnap extends maptalks.Class {
         return map.pointToCoordinate(new maptalks.Point(point), zoom)
     }
 
-    _getSnapPoint(availGeos) {
+    _getAdsorbPoint(availGeos) {
         const nearestFeature = this._findNearestFeatures(availGeos.features)
         if (!nearestFeature) return null
         const { geoObject } = nearestFeature
@@ -449,8 +449,8 @@ export class Autosnap extends maptalks.Class {
     }
 
     _resetCoordinates(geo) {
-        if (this.snapPoint) {
-            const { x, y } = this.snapPoint
+        if (this.adsorbPoint) {
+            const { x, y } = this.adsorbPoint
             const coords = geo.getCoordinates()
             const { length } = coords
             if (length) {
@@ -463,8 +463,8 @@ export class Autosnap extends maptalks.Class {
     }
 
     _resetClickPoint(clickCoords) {
-        if (this.snapPoint) {
-            const { x, y } = this.snapPoint
+        if (this.adsorbPoint) {
+            const { x, y } = this.adsorbPoint
             const { length } = clickCoords
             clickCoords[length - 1].x = x
             clickCoords[length - 1].y = y
@@ -472,10 +472,10 @@ export class Autosnap extends maptalks.Class {
     }
 
     _setEditCoordinates(geo) {
-        if (this.snapPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
-            const { x, y } = this.snapPoint
+        if (this.adsorbPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
+            const { x, y } = this.adsorbPoint
             const coordsOld0 = this.geometryCoords[0]
-            if (!includes(coordsOld0, this.snapPoint)) {
+            if (!includes(coordsOld0, this.adsorbPoint)) {
                 const coords = geo.getCoordinates()
                 const coords0 = coords[0]
                 const { length } = coords0
@@ -502,4 +502,4 @@ export class Autosnap extends maptalks.Class {
     }
 }
 
-Autosnap.mergeOptions(options)
+Autoadsorb.mergeOptions(options)

@@ -1,13 +1,13 @@
 {
-  "name": "maptalks.autosnap",
-  "version": "0.2.0 beta",
+  "name": "maptalks.autoadsorb",
+  "version": "0.2.0",
   "description": "",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": ""
   },
-  "main": "dist/maptalks.autosnap.js",
+  "main": "dist/maptalks.autoadsorb.js",
   "scripts": {
     "version": "gulp minify && git add -A dist",
     "prepublish": "gulp minify",
