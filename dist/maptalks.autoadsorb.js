@@ -6724,7 +6724,7 @@ var Autoadsorb = function (_maptalks$Class) {
         } else if (geo.type === 'Polygon') {
             var _options = geo.options;
 
-            _options.numberOfShellPoints = 600;
+            _options.numberOfShellPoints = 300;
             geo.setOptions(_options);
             coordinates = geo.getShell();
             _options.numberOfShellPoints = 60;

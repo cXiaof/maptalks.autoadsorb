@@ -191,7 +191,7 @@ export class Autoadsorb extends maptalks.Class {
             }
         } else if (geo.type === 'Polygon') {
             let { options } = geo
-            options.numberOfShellPoints = 600
+            options.numberOfShellPoints = 300
             geo.setOptions(options)
             coordinates = geo.getShell()
             options.numberOfShellPoints = 60
