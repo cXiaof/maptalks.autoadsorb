@@ -154,10 +154,10 @@ export class Autoadsorb extends maptalks.Class {
         return false
     }
 
-    _createMarkers(coords, properties = {}) {
+    _createMarkers(coords) {
         const markers = []
         flattenDeep(coords).forEach((coord) =>
-            markers.push(new maptalks.Marker(coord, { properties }).toGeoJSON())
+            markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON())
         )
         return markers
     }
@@ -190,13 +190,13 @@ export class Autoadsorb extends maptalks.Class {
                     break
             }
         } else if (geo.type === 'Polygon') {
-            coordinates = geo.toGeoJSON().geometry.coordinates[0]
-            let coords = []
-            coordinates.forEach((coord) => {
-                const [x, y] = coord
-                coords.push({ x, y })
-            })
-            geos.push(...this._createMarkers(coords, { obj: geo }))
+            let { options } = geo
+            options.numberOfShellPoints = 600
+            geo.setOptions(options)
+            coordinates = geo.getShell()
+            options.numberOfShellPoints = 60
+            geo.setOptions(options)
+            geos.push(...this._createMarkers(coordinates))
         }
         return geos
     }
@@ -206,7 +206,7 @@ export class Autoadsorb extends maptalks.Class {
         for (let i = 0; i < coords.length - 1; i++) {
             const x = coords[i]
             const y = coords[i + 1]
-            const line = new maptalks.LineString([x, y])
+            const line = new maptalks.LineString([x, y], { properties: { obj: geo } })
             lines.push(line.toGeoJSON())
         }
         return lines
@@ -309,17 +309,11 @@ export class Autoadsorb extends maptalks.Class {
         const nearestFeature = this._findNearestFeatures(availGeos.features)
         if (!nearestFeature) return null
         const { geoObject } = nearestFeature
-        const { geometry, properties } = geoObject
-        const { coordinates, type } = geometry
+        const { coordinates, type } = geoObject.geometry
         const coords0 = coordinates[0]
         switch (type) {
             case 'Point':
-                if (properties && properties.obj) {
-                    const [x, y] = properties.obj.properties.coordinates
-                    return { x, y }
-                } else {
-                    return { x: coords0, y: coordinates[1] }
-                }
+                return { x: coords0, y: coordinates[1] }
             case 'LineString':
                 const nearestLine = this._setEquation(geoObject)
                 const { A, B } = nearestLine
@@ -352,13 +346,11 @@ export class Autoadsorb extends maptalks.Class {
         })
         for (let i = 0; i < features.length; i++) {
             const geoObject = features[i]
-            const { geometry, properties } = geoObject
-            const { type } = geometry
+            const { type } = geoObject.geometry
             let distance
             switch (type) {
                 case 'Point':
-                    if (properties && properties.obj) distance = this._distToCircle(properties.obj)
-                    else distance = this._distToPoint(geoObject)
+                    distance = this._distToPoint(geoObject)
                     break
                 case 'LineString':
                     if (noPoint) distance = this._distToPolyline(geoObject)
@@ -369,39 +361,6 @@ export class Autoadsorb extends maptalks.Class {
             if (distance !== undefined) geoObjects.push({ geoObject, distance })
         }
         return geoObjects
-    }
-
-    _distToCircle(geo) {
-        const r = this._caclCircleRadius(geo)
-        const coords = geo.getCoordinates()
-        const x0 = coords.x
-        const y0 = coords.y
-
-        const x1 = this._mousePoint.x
-        const y1 = this._mousePoint.y
-
-        let dx = x1 - x0
-        const dy = y1 - y0
-        if (dx === 0 && dy === 0) dx = 1
-        const d = Math.sqrt(dx * dx + dy * dy)
-
-        const x = x0 + (r * dx) / d
-        const y = y0 + (r * dy) / d
-
-        const coordinates = [x, y]
-        geo.setProperties({ coordinates })
-
-        return this._distToPoint({ geometry: { coordinates } })
-    }
-
-    _caclCircleRadius(geo) {
-        const x0 = geo.getShell()[0].x
-        const y0 = geo.getShell()[0].y
-        const x1 = geo.getCoordinates().x
-        const y1 = geo.getCoordinates().y
-        const dx = x1 - x0
-        const dy = y1 - y0
-        return Math.abs(Math.sqrt(dx * dx + dy * dy))
     }
 
     _distToPoint(feature) {

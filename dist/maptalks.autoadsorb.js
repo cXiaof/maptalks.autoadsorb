@@ -6684,11 +6684,9 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._createMarkers = function _createMarkers(coords) {
-        var properties = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
         var markers = [];
         flattenDeep_1(coords).forEach(function (coord) {
-            return markers.push(new maptalks.Marker(coord, { properties: properties }).toGeoJSON());
+            return markers.push(new maptalks.Marker(coord, { properties: {} }).toGeoJSON());
         });
         return markers;
     };
@@ -6724,15 +6722,14 @@ var Autoadsorb = function (_maptalks$Class) {
                     break;
             }
         } else if (geo.type === 'Polygon') {
-            coordinates = geo.toGeoJSON().geometry.coordinates[0];
-            var coords = [];
-            coordinates.forEach(function (coord) {
-                var x = coord[0],
-                    y = coord[1];
+            var _options = geo.options;
 
-                coords.push({ x: x, y: y });
-            });
-            geos.push.apply(geos, this._createMarkers(coords, { obj: geo }));
+            _options.numberOfShellPoints = 600;
+            geo.setOptions(_options);
+            coordinates = geo.getShell();
+            _options.numberOfShellPoints = 60;
+            geo.setOptions(_options);
+            geos.push.apply(geos, this._createMarkers(coordinates));
         }
         return geos;
     };
@@ -6742,7 +6739,7 @@ var Autoadsorb = function (_maptalks$Class) {
         for (var i = 0; i < coords.length - 1; i++) {
             var x = coords[i];
             var y = coords[i + 1];
-            var line = new maptalks.LineString([x, y]);
+            var line = new maptalks.LineString([x, y], { properties: { obj: geo } });
             lines.push(line.toGeoJSON());
         }
         return lines;
@@ -6854,23 +6851,14 @@ var Autoadsorb = function (_maptalks$Class) {
         var nearestFeature = this._findNearestFeatures(availGeos.features);
         if (!nearestFeature) return null;
         var geoObject = nearestFeature.geoObject;
-        var geometry = geoObject.geometry,
-            properties = geoObject.properties;
-        var coordinates = geometry.coordinates,
-            type = geometry.type;
+        var _geoObject$geometry = geoObject.geometry,
+            coordinates = _geoObject$geometry.coordinates,
+            type = _geoObject$geometry.type;
 
         var coords0 = coordinates[0];
         switch (type) {
             case 'Point':
-                if (properties && properties.obj) {
-                    var _properties$obj$prope = properties.obj.properties.coordinates,
-                        _x2 = _properties$obj$prope[0],
-                        _y = _properties$obj$prope[1];
-
-                    return { x: _x2, y: _y };
-                } else {
-                    return { x: coords0, y: coordinates[1] };
-                }
+                return { x: coords0, y: coordinates[1] };
             case 'LineString':
                 var nearestLine = this._setEquation(geoObject);
                 var A = nearestLine.A,
@@ -6906,14 +6894,12 @@ var Autoadsorb = function (_maptalks$Class) {
         });
         for (var i = 0; i < features.length; i++) {
             var geoObject = features[i];
-            var geometry = geoObject.geometry,
-                properties = geoObject.properties;
-            var type = geometry.type;
+            var type = geoObject.geometry.type;
 
             var distance = void 0;
             switch (type) {
                 case 'Point':
-                    if (properties && properties.obj) distance = this._distToCircle(properties.obj);else distance = this._distToPoint(geoObject);
+                    distance = this._distToPoint(geoObject);
                     break;
                 case 'LineString':
                     if (noPoint) distance = this._distToPolyline(geoObject);
@@ -6924,39 +6910,6 @@ var Autoadsorb = function (_maptalks$Class) {
             if (distance !== undefined) geoObjects.push({ geoObject: geoObject, distance: distance });
         }
         return geoObjects;
-    };
-
-    Autoadsorb.prototype._distToCircle = function _distToCircle(geo) {
-        var r = this._caclCircleRadius(geo);
-        var coords = geo.getCoordinates();
-        var x0 = coords.x;
-        var y0 = coords.y;
-
-        var x1 = this._mousePoint.x;
-        var y1 = this._mousePoint.y;
-
-        var dx = x1 - x0;
-        var dy = y1 - y0;
-        if (dx === 0 && dy === 0) dx = 1;
-        var d = Math.sqrt(dx * dx + dy * dy);
-
-        var x = x0 + r * dx / d;
-        var y = y0 + r * dy / d;
-
-        var coordinates = [x, y];
-        geo.setProperties({ coordinates: coordinates });
-
-        return this._distToPoint({ geometry: { coordinates: coordinates } });
-    };
-
-    Autoadsorb.prototype._caclCircleRadius = function _caclCircleRadius(geo) {
-        var x0 = geo.getShell()[0].x;
-        var y0 = geo.getShell()[0].y;
-        var x1 = geo.getCoordinates().x;
-        var y1 = geo.getCoordinates().y;
-        var dx = x1 - x0;
-        var dy = y1 - y0;
-        return Math.abs(Math.sqrt(dx * dx + dy * dy));
     };
 
     Autoadsorb.prototype._distToPoint = function _distToPoint(feature) {
