@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/cXiaof/maptalks.autoadsorb/issues"
   },
-  "homepage": "https://github.com/cXiaof/maptalks.autoadsorb/wiki",
+  "homepage": "https://github.com/cXiaof/maptalks.autoadsorb",
   "scripts": {
     "version": "gulp minify && git add -A dist",
     "prepublish": "gulp minify",

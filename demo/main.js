@@ -60,3 +60,12 @@ const toolbar = new maptalks.control.Toolbar({
         }
     ]
 }).addTo(map)
+
+new maptalks.control.Panel({
+    position: { top: '0', left: '0' },
+    draggable: true,
+    custom: false,
+    content:
+        '<div>· 右键图形：</div><div>开始/停止编辑</div><div>· contextmenu</div><div>on geometry to</div><div>start/end edit</div>',
+    closeButton: true
+}).addTo(map)
