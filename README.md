@@ -6,7 +6,7 @@ Adsorb vertux/border/both of geos on layer When drawing or editing,based on [map
 
 ## Examples
 
--   [DEMO](https://cxiaof.github.io/maptalks.autoadsorb/demo/index.html).
+#### [DEMO](https://cxiaof.github.io/maptalks.autoadsorb/demo/index.html).
 
 ## Install
 
