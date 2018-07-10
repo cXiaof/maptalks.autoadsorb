@@ -2,11 +2,11 @@
 
 A simple maptalks plugin scaffolding project.
 
-Adsorb vertux/border/both of geos on layer When drawing or editing,based on [maptalks.snapto](https://github.com/liubgithub/maptalks.snapto/wiki)
+Adsorb vertux/border/both of geos on layer When drawing or editing,inspired on [maptalks.snapto](https://github.com/liubgithub/maptalks.snapto/wiki)
 
 ## Examples
 
-#### [DEMO](https://cxiaof.github.io/maptalks.autoadsorb/demo/index.html).
+### [DEMO](https://cxiaof.github.io/maptalks.autoadsorb/demo/index.html)
 
 ## Install
 
