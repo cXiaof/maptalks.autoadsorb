@@ -12,9 +12,9 @@ const map = new maptalks.Map('map', {
 
 const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
-const drawTool = new maptalks.DrawTool({ mode: 'LineString' }).addTo(map).disable()
+const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
 
-const adjust = new maptalks.Autoadsorb().setLayer(layerSketch)
+const autoAdsorb = new maptalks.Autoadsorb().setLayer(layerSketch)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param
@@ -22,11 +22,11 @@ drawTool.on('drawend', (param) => {
     geometry.on('contextmenu', () => {
         const isEditing = geometry.isEditing()
         if (isEditing) {
-            adjust.setLayer(layerSketch)
+            autoAdsorb.setLayer(layerSketch)
             geometry.endEdit()
         }
         if (!isEditing) {
-            adjust.setGeometry(geometry)
+            autoAdsorb.setGeometry(geometry)
             geometry.startEdit()
         }
     })
@@ -38,7 +38,7 @@ modesDraw.map((item) => childrenDraw.push({ item, click: () => drawTool.setMode(
 
 const modesPlug = ['auto', 'vertux', 'border']
 let childrenPlug = []
-modesPlug.map((item) => childrenPlug.push({ item, click: () => adjust.setMode(item) }))
+modesPlug.map((item) => childrenPlug.push({ item, click: () => autoAdsorb.setMode(item) }))
 
 const toolbar = new maptalks.control.Toolbar({
     items: [

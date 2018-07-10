@@ -2191,9 +2191,9 @@ maptalks-rollup-plugin-babel@^3.0.2:
   dependencies:
     rollup-pluginutils "^1.5.0"
 
-maptalks@^0.40.4:
-  version "0.40.4"
-  resolved "https://registry.yarnpkg.com/maptalks/-/maptalks-0.40.4.tgz#14718191a1eef18548699f9d995b61024561fdc3"
+maptalks@^0.40.5:
+  version "0.40.5"
+  resolved "http://registry.npm.taobao.org/maptalks/download/maptalks-0.40.5.tgz#08d4bf3de8a99f0684965a2179e12522ec65d5a3"
   dependencies:
     simplify-js "^1.2.1"
     zousan "^2.3.3"

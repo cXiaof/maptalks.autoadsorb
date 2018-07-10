@@ -15,8 +15,8 @@ export class Autoadsorb extends maptalks.Class {
     constructor(options) {
         super(options)
         this.tree = rbush()
-        this._distance = Math.max(this.options['distance'] || options.distance, 1)
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
+        this._updateDistance()
         this._updateModeType()
     }
 
@@ -56,12 +56,20 @@ export class Autoadsorb extends maptalks.Class {
 
     bindGeometry(geometry) {
         if (geometry instanceof maptalks.Geometry) {
+            if (this.geometry) return this.setGeometry(geometry)
             this.geometry = geometry
             this.geometryCoords = geometry.getCoordinates()
             geometry.on('editstart', (e) => this.enable(), this)
             geometry.on('editend', (e) => this.disable(), this)
             geometry.on('remove', (e) => this.remove(), this)
-            geometry.startEdit().endEdit()
+            if (geometry.isEditing()) {
+                geometry.endEdit()
+                this.enable()
+                geometry
+                    .startEdit()
+                    .endEdit()
+                    .startEdit()
+            } else geometry.startEdit().endEdit()
         }
         return this
     }
@@ -92,6 +100,8 @@ export class Autoadsorb extends maptalks.Class {
         this.disable()
         const layer = map.getLayer(this._layerName)
         if (layer) layer.remove()
+        delete this.geometry
+        delete this.geometryCoords
         delete this._mousemoveLayer
     }
 
@@ -105,8 +115,23 @@ export class Autoadsorb extends maptalks.Class {
         return this._mode
     }
 
+    setDistance(distance) {
+        this._updateDistance(distance)
+        this._updateGeosSet()
+        return this
+    }
+
+    getDistance() {
+        return this._distance
+    }
+
     _updateModeType(mode) {
         this._mode = mode || this.options['mode'] || options.mode
+    }
+
+    _updateDistance(distance) {
+        distance = distance || this.options['distance'] || options.distance
+        this._distance = Math.max(distance, 1)
     }
 
     _addTo(map) {

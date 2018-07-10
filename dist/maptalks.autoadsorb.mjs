@@ -6513,8 +6513,8 @@ var Autoadsorb = function (_maptalks$Class) {
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
         _this.tree = geojsonRbush_1();
-        _this._distance = Math.max(_this.options['distance'] || options.distance, 1);
         _this._layerName = INTERNAL_LAYER_PREFIX + '_Autoadsorb';
+        _this._updateDistance();
         _this._updateModeType();
         return _this;
     }
@@ -6571,6 +6571,7 @@ var Autoadsorb = function (_maptalks$Class) {
         var _this4 = this;
 
         if (geometry instanceof Geometry) {
+            if (this.geometry) return this.setGeometry(geometry);
             this.geometry = geometry;
             this.geometryCoords = geometry.getCoordinates();
             geometry.on('editstart', function (e) {
@@ -6582,7 +6583,11 @@ var Autoadsorb = function (_maptalks$Class) {
             geometry.on('remove', function (e) {
                 return _this4.remove();
             }, this);
-            geometry.startEdit().endEdit();
+            if (geometry.isEditing()) {
+                geometry.endEdit();
+                this.enable();
+                geometry.startEdit().endEdit().startEdit();
+            } else geometry.startEdit().endEdit();
         }
         return this;
     };
@@ -6613,6 +6618,8 @@ var Autoadsorb = function (_maptalks$Class) {
         this.disable();
         var layer = map.getLayer(this._layerName);
         if (layer) layer.remove();
+        delete this.geometry;
+        delete this.geometryCoords;
         delete this._mousemoveLayer;
     };
 
@@ -6626,8 +6633,23 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._mode;
     };
 
+    Autoadsorb.prototype.setDistance = function setDistance(distance) {
+        this._updateDistance(distance);
+        this._updateGeosSet();
+        return this;
+    };
+
+    Autoadsorb.prototype.getDistance = function getDistance() {
+        return this._distance;
+    };
+
     Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
         this._mode = mode || this.options['mode'] || options.mode;
+    };
+
+    Autoadsorb.prototype._updateDistance = function _updateDistance(distance) {
+        distance = distance || this.options['distance'] || options.distance;
+        this._distance = Math.max(distance, 1);
     };
 
     Autoadsorb.prototype._addTo = function _addTo(map) {
