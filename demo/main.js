@@ -22,12 +22,12 @@ drawTool.on('drawend', (param) => {
     geometry.on('contextmenu', () => {
         const isEditing = geometry.isEditing()
         if (isEditing) {
-            autoAdsorb.setLayer(layerSketch)
             geometry.endEdit()
+            autoAdsorb.setLayer(layerSketch)
         }
         if (!isEditing) {
-            autoAdsorb.setGeometry(geometry)
             geometry.startEdit()
+            autoAdsorb.setGeometry(geometry)
         }
     })
 })
