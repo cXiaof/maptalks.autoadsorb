@@ -6586,7 +6586,7 @@ var Autoadsorb = function (_maptalks$Class) {
             if (geometry.isEditing()) {
                 geometry.endEdit();
                 this.enable();
-                geometry.startEdit().endEdit().startEdit();
+                geometry.startEdit();
             } else geometry.startEdit().endEdit();
         }
         return this;
