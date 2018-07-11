@@ -1,7 +1,5 @@
 # maptalks.autoadsorb
 
-A simple maptalks plugin scaffolding project.
-
 Adsorb vertux/border/both of geos on layer When drawing or editing,inspired on [maptalks.snapto](https://github.com/liubgithub/maptalks.snapto/wiki)
 
 ## Examples
