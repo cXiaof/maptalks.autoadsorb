@@ -1,6 +1,6 @@
 {
   "name": "maptalks.autoadsorb",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Adsorb vertux/border/both of geos on layer When drawing or editing",
   "license": "MIT",
   "author": "cXiaof",
@@ -22,7 +22,7 @@
     "w": "gulp watch"
   },
   "devDependencies": {
-    "babel-eslint": "^8.2.5",
+    "babel-eslint": "^8.2.6",
     "babel-preset-env": "^1.7.0",
     "gulp": "^3.9.1",
     "maptalks": "^0.40.5",

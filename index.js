@@ -16,6 +16,7 @@ export class Autoadsorb extends maptalks.Class {
         super(options)
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
+        this._isEnable = false
         this._updateDistance()
         this._updateModeType()
     }
@@ -72,6 +73,7 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     enable() {
+        this._isEnable = true
         this._updateGeosSet()
         this._registerMapEvents()
         if (this.drawTool) this._registerDrawToolEvents()
@@ -81,6 +83,7 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     disable() {
+        this._isEnable = false
         this._offMapEvents()
         this._offDrawToolEvents()
         this._offGeometryEvents()
@@ -91,6 +94,15 @@ export class Autoadsorb extends maptalks.Class {
         delete this._mouseup
         if (this._mousemoveLayer) this._mousemoveLayer.hide()
         return this
+    }
+
+    isEnable() {
+        return this._isEnable
+    }
+
+    toggleable() {
+        if (this._isEnable) this.disable()
+        else this.enable()
     }
 
     remove() {
@@ -146,12 +158,14 @@ export class Autoadsorb extends maptalks.Class {
         const modeAuto = this._mode === 'auto'
         const modeVertux = this._mode === 'vertux'
         const modeBorder = this._mode === 'border'
-        let geos = []
+        let geosPoint = []
+        let geosLine = []
         geometries.forEach((geo) => {
-            if (modeAuto || modeVertux) geos.push(...this._parseToPoints(geo))
-            if (modeAuto || modeBorder) geos.push(...this._parseToLines(geo))
+            if (modeAuto || modeVertux) geosPoint.push(...this._parseToPoints(geo))
+            if (modeAuto || modeBorder) geosLine.push(...this._parseToLines(geo))
         })
-        this._geosSet = geos
+        this._geosSetPoint = geosPoint
+        this._geosSetLine = geosLine
     }
 
     _parseToPoints(geo) {
@@ -235,7 +249,8 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _resetGeosSet() {
-        this._geosSet = []
+        this._geosSetPoint = []
+        this._geosSetLine = []
     }
 
     _registerMapEvents() {
@@ -292,19 +307,32 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _findGeometry(coordinate) {
-        if (this._geosSet) {
-            const features = this._geosSet
-            this.tree.clear()
-            this.tree.load({ type: 'FeatureCollection', features })
-            const inspectExtent = this._createInspectExtent(coordinate)
-            const availGeos = this.tree.search(inspectExtent)
-            return availGeos
+        if (!this._geosSetPoint && !this._geosSetLine) return null
+        let availGeos = {
+            type: 'FeatureCollection',
+            features: []
         }
-        return null
+        if (this._geosSetPoint) {
+            const geos = this._findAvailGeos(this._geosSetPoint, coordinate)
+            availGeos.features.push(...geos)
+        }
+        if (this._geosSetLine) {
+            const geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 10)
+            availGeos.features.push(...geos)
+        }
+        return availGeos
     }
 
-    _createInspectExtent(coordinate) {
-        const distance = this._distance
+    _findAvailGeos(features, coordinate, distance = this._distance) {
+        this.tree.clear()
+        this.tree.load({ type: 'FeatureCollection', features })
+        const inspectExtent = this._createInspectExtent(coordinate, distance)
+        const availGeos = this.tree.search(inspectExtent)
+        return availGeos.features
+    }
+
+    _createInspectExtent(coordinate, distance) {
+        distance = parseInt(distance, 0)
         const map = this._map
         const zoom = map.getZoom()
         const { x, y } = map.coordinateToPoint(coordinate, zoom)
@@ -444,18 +472,18 @@ export class Autoadsorb extends maptalks.Class {
     _registerDrawToolEvents() {
         const drawTool = this.drawTool
         drawTool.on('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
+        drawTool.on('mousemove', (e) => this._resetCoordinates(e.target._geometry || e), this)
         drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry), this)
+        drawTool.on('drawend', (e) => this._resetCoordinates(e.geometry || e), this)
     }
 
     _offDrawToolEvents() {
         if (this.drawTool) {
             const drawTool = this.drawTool
-            drawTool.off('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-            drawTool.off('mousemove', (e) => this._resetCoordinates(e.target._geometry), this)
-            drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-            drawTool.off('drawend', (e) => this._resetCoordinates(e.geometry), this)
+            drawTool.off('drawstart', (e) => this._resetCoordsAndPoint, this)
+            drawTool.off('mousemove', (e) => this._resetCoordinates, this)
+            drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint, this)
+            drawTool.off('drawend', (e) => this._resetCoordinates, this)
         }
     }
 
@@ -468,36 +496,60 @@ export class Autoadsorb extends maptalks.Class {
     _offGeometryEvents() {
         if (this.geometry) {
             const geometry = this.geometry
-            geometry.off('shapechange', (e) => this._setEditCoordinates(e.target), this)
-            geometry.off('editrecord', (e) => this._upGeoCoords(e.target.getCoordinates()), this)
+            geometry.off('shapechange', (e) => this._setEditCoordinates, this)
+            geometry.off('editrecord', (e) => this._upGeoCoords, this)
         }
     }
 
     _resetCoordsAndPoint(e) {
-        this._resetCoordinates(e.target._geometry)
+        this._resetCoordinates(e.target._geometry || e)
         this._resetClickPoint(e.target._clickCoords)
     }
 
     _resetCoordinates(geo) {
         if (this.adsorbPoint) {
             const { x, y } = this.adsorbPoint
-            const coords = geo.getCoordinates()
-            const { length } = coords
-            if (length) {
-                coords[length - 1].x = x
-                coords[length - 1].y = y
+            if (geo instanceof maptalks.Geometry) {
+                const coords = geo.getCoordinates()
+                if (coords instanceof Array) {
+                    const { length } = coords
+                    if (length) {
+                        coords[length - 1].x = x
+                        coords[length - 1].y = y
+                    }
+                    geo.setCoordinates(coords)
+                } else {
+                    if (geo instanceof maptalks.Circle) {
+                        const map = this._map
+                        const radius = map.getProjection().measureLength([coords, this.adsorbPoint])
+                        geo.setRadius(radius)
+                    }
+                }
             }
-            geo.setCoordinates(coords)
-            return geo
         }
     }
 
     _resetClickPoint(clickCoords) {
         if (this.adsorbPoint) {
-            const { x, y } = this.adsorbPoint
-            const { length } = clickCoords
-            clickCoords[length - 1].x = x
-            clickCoords[length - 1].y = y
+            if (clickCoords instanceof maptalks.Coordinate || clickCoords instanceof Array) {
+                const { x, y } = this.adsorbPoint
+                const { length } = clickCoords
+                if (length) {
+                    clickCoords[length - 1].x = x
+                    clickCoords[length - 1].y = y
+                } else {
+                    clickCoords.x = x
+                    clickCoords.y = y
+                }
+            } else if (clickCoords) {
+                const geo = clickCoords.geometry
+                if (geo instanceof maptalks.Circle) {
+                    const map = this._map
+                    const center = geo.getCoordinates()
+                    const radius = map.getProjection().measureLength([center, this.adsorbPoint])
+                    geo.setRadius(radius)
+                }
+            }
         }
     }
 
