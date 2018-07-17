@@ -6516,9 +6516,9 @@ var Autoadsorb = function (_maptalks$Class) {
         _this.tree = geojsonRbush_1();
         _this._layerName = INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
-        _this._updateNeedCrtl();
-        _this._updateDistance();
-        _this._updateModeType();
+        _this._updateModeType(options && options.mode);
+        _this._updateDistance(options && options.distance);
+        _this._updateNeedCrtl(options && options.needCrtl);
         return _this;
     }
 
@@ -6646,10 +6646,6 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._mode;
     };
 
-    Autoadsorb.prototype.needCrtl = function needCrtl(need) {
-        this._updateNeedCrtl(need);
-    };
-
     Autoadsorb.prototype.setDistance = function setDistance(distance) {
         this._updateDistance(distance);
         this._updateGeosSet();
@@ -6660,10 +6656,12 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._distance;
     };
 
-    Autoadsorb.prototype._updateNeedCrtl = function _updateNeedCrtl(need) {
-        need = need !== undefined ? need : this.options['needCrtl'];
-        need = need !== undefined ? need : options.needCrtl;
-        this._needCrtl = need;
+    Autoadsorb.prototype.needCrtl = function needCrtl(need) {
+        this._updateNeedCrtl(need);
+    };
+
+    Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
+        this._mode = mode || this.options['mode'] || options.mode;
     };
 
     Autoadsorb.prototype._updateDistance = function _updateDistance(distance) {
@@ -6671,8 +6669,10 @@ var Autoadsorb = function (_maptalks$Class) {
         this._distance = Math.max(distance, 1);
     };
 
-    Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
-        this._mode = mode || this.options['mode'] || options.mode;
+    Autoadsorb.prototype._updateNeedCrtl = function _updateNeedCrtl(need) {
+        need = need !== undefined ? need : this.options['needCrtl'];
+        need = need !== undefined ? need : options.needCrtl;
+        this._needCrtl = need;
     };
 
     Autoadsorb.prototype._addTo = function _addTo(map) {

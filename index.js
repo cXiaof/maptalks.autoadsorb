@@ -18,9 +18,9 @@ export class Autoadsorb extends maptalks.Class {
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
-        this._updateNeedCrtl()
-        this._updateDistance()
-        this._updateModeType()
+        this._updateModeType(options && options.mode)
+        this._updateDistance(options && options.distance)
+        this._updateNeedCrtl(options && options.needCrtl)
     }
 
     setLayer(layer) {
@@ -126,10 +126,6 @@ export class Autoadsorb extends maptalks.Class {
         return this._mode
     }
 
-    needCrtl(need) {
-        this._updateNeedCrtl(need)
-    }
-
     setDistance(distance) {
         this._updateDistance(distance)
         this._updateGeosSet()
@@ -140,10 +136,12 @@ export class Autoadsorb extends maptalks.Class {
         return this._distance
     }
 
-    _updateNeedCrtl(need) {
-        need = need !== undefined ? need : this.options['needCrtl']
-        need = need !== undefined ? need : options.needCrtl
-        this._needCrtl = need
+    needCrtl(need) {
+        this._updateNeedCrtl(need)
+    }
+
+    _updateModeType(mode) {
+        this._mode = mode || this.options['mode'] || options.mode
     }
 
     _updateDistance(distance) {
@@ -151,8 +149,10 @@ export class Autoadsorb extends maptalks.Class {
         this._distance = Math.max(distance, 1)
     }
 
-    _updateModeType(mode) {
-        this._mode = mode || this.options['mode'] || options.mode
+    _updateNeedCrtl(need) {
+        need = need !== undefined ? need : this.options['needCrtl']
+        need = need !== undefined ? need : options.needCrtl
+        this._needCrtl = need
     }
 
     _addTo(map) {
