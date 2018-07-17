@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.1.0-beta.1
+ * maptalks.autoadsorb v0.1.0-beta.2
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -7201,4 +7201,4 @@ Autoadsorb.mergeOptions(options);
 
 export { Autoadsorb };
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.1');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.2');
