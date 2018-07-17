@@ -162,7 +162,13 @@ export class Autoadsorb extends maptalks.Class {
         let geosLine = []
         geometries.forEach((geo) => {
             if (modeAuto || modeVertux) geosPoint.push(...this._parseToPoints(geo))
-            if (modeAuto || modeBorder) geosLine.push(...this._parseToLines(geo))
+            if (modeAuto || modeBorder) {
+                const geos = this._parseToLines(geo)
+                geos.forEach((item) => {
+                    if (item.geometry.type === 'Point') geosPoint.push(item)
+                    else geosLine.push(item)
+                })
+            }
         })
         this._geosSetPoint = geosPoint
         this._geosSetLine = geosLine
@@ -317,7 +323,7 @@ export class Autoadsorb extends maptalks.Class {
             availGeos.features.push(...geos)
         }
         if (this._geosSetLine) {
-            const geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 10)
+            const geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 2)
             availGeos.features.push(...geos)
         }
         return availGeos
@@ -332,7 +338,7 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _createInspectExtent(coordinate, distance) {
-        distance = parseInt(distance, 0)
+        distance = Math.max(parseInt(distance, 0), 1)
         const map = this._map
         const zoom = map.getZoom()
         const { x, y } = map.coordinateToPoint(coordinate, zoom)
@@ -556,25 +562,40 @@ export class Autoadsorb extends maptalks.Class {
     _setEditCoordinates(geo) {
         if (this.adsorbPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
             const { x, y } = this.adsorbPoint
-            const coordsOld0 = this.geometryCoords[0]
-            if (!includes(coordsOld0, this.adsorbPoint)) {
-                const coords = geo.getCoordinates()
-                const coords0 = coords[0]
-                const { length } = coords0
+            if (this.geometryCoords instanceof Array) {
+                const coordsOld0 = this.geometryCoords[0]
+                if (!includes(coordsOld0, this.adsorbPoint)) {
+                    const coords = geo.getCoordinates()
+                    const coords0 = coords[0]
 
-                const coordsNew = differenceWith(coords0, coordsOld0, isEqual)[0]
-                const coordsIndex = findIndex(coords0, coordsNew)
-
-                coords[0][coordsIndex].x = x
-                coords[0][coordsIndex].y = y
-                if (coordsIndex === 0) {
-                    coords[0][length - 1].x = x
-                    coords[0][length - 1].y = y
+                    if (coords0 instanceof Array) {
+                        const coordsNew = differenceWith(coords0, coordsOld0, isEqual)[0]
+                        const coordsIndex = findIndex(coords0, coordsNew)
+                        const { length } = coords0
+                        coords[0][coordsIndex].x = x
+                        coords[0][coordsIndex].y = y
+                        if (coordsIndex === 0) {
+                            coords[0][length - 1].x = x
+                            coords[0][length - 1].y = y
+                        }
+                    } else {
+                        const coordsNew = differenceWith(coords, this.geometryCoords, isEqual)[0]
+                        const coordsIndex = findIndex(coords, coordsNew)
+                        coords[coordsIndex].x = x
+                        coords[coordsIndex].y = y
+                    }
+                    this._needDeal = false
+                    this._upGeoCoords(coords)
+                    geo.setCoordinates(this.geometryCoords)
                 }
-
-                this._needDeal = false
-                this._upGeoCoords(coords)
-                geo.setCoordinates(this.geometryCoords)
+            } else {
+                if (this.geometry instanceof maptalks.Circle) {
+                    this._needDeal = false
+                    const map = this._map
+                    const center = this.geometryCoords
+                    const radius = map.getProjection().measureLength([center, this.adsorbPoint])
+                    geo.setRadius(radius)
+                }
             }
         }
     }

@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.1.0-beta.2
+ * maptalks.autoadsorb v0.1.0-beta.3
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -6688,7 +6688,12 @@ var Autoadsorb = function (_maptalks$Class) {
         var geosLine = [];
         geometries.forEach(function (geo) {
             if (modeAuto || modeVertux) geosPoint.push.apply(geosPoint, _this5._parseToPoints(geo));
-            if (modeAuto || modeBorder) geosLine.push.apply(geosLine, _this5._parseToLines(geo));
+            if (modeAuto || modeBorder) {
+                var geos = _this5._parseToLines(geo);
+                geos.forEach(function (item) {
+                    if (item.geometry.type === 'Point') geosPoint.push(item);else geosLine.push(item);
+                });
+            }
         });
         this._geosSetPoint = geosPoint;
         this._geosSetLine = geosLine;
@@ -6858,7 +6863,7 @@ var Autoadsorb = function (_maptalks$Class) {
         if (this._geosSetLine) {
             var _availGeos$features2;
 
-            var _geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 10);
+            var _geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 2);
             (_availGeos$features2 = availGeos.features).push.apply(_availGeos$features2, _geos);
         }
         return availGeos;
@@ -6875,7 +6880,7 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate, distance) {
-        distance = parseInt(distance, 0);
+        distance = Math.max(parseInt(distance, 0), 1);
         var map = this._map;
         var zoom = map.getZoom();
 
@@ -7170,26 +7175,41 @@ var Autoadsorb = function (_maptalks$Class) {
                 x = _adsorbPoint4.x,
                 y = _adsorbPoint4.y;
 
-            var coordsOld0 = this.geometryCoords[0];
-            if (!includes_1(coordsOld0, this.adsorbPoint)) {
-                var coords = geo.getCoordinates();
-                var coords0 = coords[0];
-                var length = coords0.length;
+            if (this.geometryCoords instanceof Array) {
+                var coordsOld0 = this.geometryCoords[0];
+                if (!includes_1(coordsOld0, this.adsorbPoint)) {
+                    var coords = geo.getCoordinates();
+                    var coords0 = coords[0];
 
+                    if (coords0 instanceof Array) {
+                        var coordsNew = differenceWith_1(coords0, coordsOld0, isEqual_1)[0];
+                        var coordsIndex = findIndex_1(coords0, coordsNew);
+                        var length = coords0.length;
 
-                var coordsNew = differenceWith_1(coords0, coordsOld0, isEqual_1)[0];
-                var coordsIndex = findIndex_1(coords0, coordsNew);
-
-                coords[0][coordsIndex].x = x;
-                coords[0][coordsIndex].y = y;
-                if (coordsIndex === 0) {
-                    coords[0][length - 1].x = x;
-                    coords[0][length - 1].y = y;
+                        coords[0][coordsIndex].x = x;
+                        coords[0][coordsIndex].y = y;
+                        if (coordsIndex === 0) {
+                            coords[0][length - 1].x = x;
+                            coords[0][length - 1].y = y;
+                        }
+                    } else {
+                        var _coordsNew = differenceWith_1(coords, this.geometryCoords, isEqual_1)[0];
+                        var _coordsIndex = findIndex_1(coords, _coordsNew);
+                        coords[_coordsIndex].x = x;
+                        coords[_coordsIndex].y = y;
+                    }
+                    this._needDeal = false;
+                    this._upGeoCoords(coords);
+                    geo.setCoordinates(this.geometryCoords);
                 }
-
-                this._needDeal = false;
-                this._upGeoCoords(coords);
-                geo.setCoordinates(this.geometryCoords);
+            } else {
+                if (this.geometry instanceof maptalks.Circle) {
+                    this._needDeal = false;
+                    var _map6 = this._map;
+                    var center = this.geometryCoords;
+                    var radius = _map6.getProjection().measureLength([center, this.adsorbPoint]);
+                    geo.setRadius(radius);
+                }
             }
         }
     };
@@ -7207,6 +7227,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.2');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.3');
 
 })));
