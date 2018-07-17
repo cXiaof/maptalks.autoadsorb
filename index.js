@@ -8,7 +8,8 @@ import flattenDeep from 'lodash/flattenDeep'
 
 const options = {
     mode: 'auto',
-    distance: 10
+    distance: 10,
+    needCrtl: false
 }
 
 export class Autoadsorb extends maptalks.Class {
@@ -17,6 +18,7 @@ export class Autoadsorb extends maptalks.Class {
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
+        this._updateNeedCrtl()
         this._updateDistance()
         this._updateModeType()
     }
@@ -124,6 +126,10 @@ export class Autoadsorb extends maptalks.Class {
         return this._mode
     }
 
+    needCrtl(need) {
+        this._updateNeedCrtl(need)
+    }
+
     setDistance(distance) {
         this._updateDistance(distance)
         this._updateGeosSet()
@@ -134,13 +140,19 @@ export class Autoadsorb extends maptalks.Class {
         return this._distance
     }
 
-    _updateModeType(mode) {
-        this._mode = mode || this.options['mode'] || options.mode
+    _updateNeedCrtl(need) {
+        need = need !== undefined ? need : this.options['needCrtl']
+        need = need !== undefined ? need : options.needCrtl
+        this._needCrtl = need
     }
 
     _updateDistance(distance) {
         distance = distance || this.options['distance'] || options.distance
         this._distance = Math.max(distance, 1)
+    }
+
+    _updateModeType(mode) {
+        this._mode = mode || this.options['mode'] || options.mode
     }
 
     _addTo(map) {
@@ -284,8 +296,9 @@ export class Autoadsorb extends maptalks.Class {
         if (this._mouseup) map.off('mouseup', this._mouseup, this)
     }
 
-    _mousemoveEvents(event) {
-        const { coordinate } = event
+    _mousemoveEvents(e) {
+        const { coordinate, domEvent } = e
+        const { ctrlKey } = domEvent
         this._needDeal = true
         this._mousePoint = coordinate
 
@@ -296,6 +309,7 @@ export class Autoadsorb extends maptalks.Class {
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
+        if (this._needCrtl && !ctrlKey) this.adsorbPoint = null
     }
 
     _updateAdsorbPoint(coordinate) {
@@ -342,10 +356,10 @@ export class Autoadsorb extends maptalks.Class {
         const map = this._map
         const zoom = map.getZoom()
         const { x, y } = map.coordinateToPoint(coordinate, zoom)
-        const lt = this._pointToCoordinateWithZoom([x - distance, y - distance], zoom)
-        const rt = this._pointToCoordinateWithZoom([x + distance, y - distance], zoom)
-        const rb = this._pointToCoordinateWithZoom([x + distance, y + distance], zoom)
-        const lb = this._pointToCoordinateWithZoom([x - distance, y + distance], zoom)
+        const lt = this._pointToCoordWithZoom([x - distance, y - distance])
+        const rt = this._pointToCoordWithZoom([x + distance, y - distance])
+        const rb = this._pointToCoordWithZoom([x + distance, y + distance])
+        const lb = this._pointToCoordWithZoom([x - distance, y + distance])
         return {
             type: 'Feature',
             properties: {},
@@ -356,8 +370,9 @@ export class Autoadsorb extends maptalks.Class {
         }
     }
 
-    _pointToCoordinateWithZoom(point, zoom) {
+    _pointToCoordWithZoom(point) {
         const map = this._map
+        const zoom = map.getZoom()
         return map.pointToCoordinate(new maptalks.Point(point), zoom)
     }
 

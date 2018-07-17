@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.1.0-beta.3
+ * maptalks.autoadsorb v0.1.0-beta.4
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -6505,7 +6505,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var options = {
     mode: 'auto',
-    distance: 10
+    distance: 10,
+    needCrtl: false
 };
 
 var Autoadsorb = function (_maptalks$Class) {
@@ -6519,6 +6520,7 @@ var Autoadsorb = function (_maptalks$Class) {
         _this.tree = geojsonRbush_1();
         _this._layerName = maptalks.INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
+        _this._updateNeedCrtl();
         _this._updateDistance();
         _this._updateModeType();
         return _this;
@@ -6648,6 +6650,10 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._mode;
     };
 
+    Autoadsorb.prototype.needCrtl = function needCrtl(need) {
+        this._updateNeedCrtl(need);
+    };
+
     Autoadsorb.prototype.setDistance = function setDistance(distance) {
         this._updateDistance(distance);
         this._updateGeosSet();
@@ -6658,13 +6664,19 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._distance;
     };
 
-    Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
-        this._mode = mode || this.options['mode'] || options.mode;
+    Autoadsorb.prototype._updateNeedCrtl = function _updateNeedCrtl(need) {
+        need = need !== undefined ? need : this.options['needCrtl'];
+        need = need !== undefined ? need : options.needCrtl;
+        this._needCrtl = need;
     };
 
     Autoadsorb.prototype._updateDistance = function _updateDistance(distance) {
         distance = distance || this.options['distance'] || options.distance;
         this._distance = Math.max(distance, 1);
+    };
+
+    Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
+        this._mode = mode || this.options['mode'] || options.mode;
     };
 
     Autoadsorb.prototype._addTo = function _addTo(map) {
@@ -6819,8 +6831,10 @@ var Autoadsorb = function (_maptalks$Class) {
         if (this._mouseup) map.off('mouseup', this._mouseup, this);
     };
 
-    Autoadsorb.prototype._mousemoveEvents = function _mousemoveEvents(event) {
-        var coordinate = event.coordinate;
+    Autoadsorb.prototype._mousemoveEvents = function _mousemoveEvents(e) {
+        var coordinate = e.coordinate,
+            domEvent = e.domEvent;
+        var ctrlKey = domEvent.ctrlKey;
 
         this._needDeal = true;
         this._mousePoint = coordinate;
@@ -6830,6 +6844,7 @@ var Autoadsorb = function (_maptalks$Class) {
         }).addTo(this._mousemoveLayer);
 
         this._updateAdsorbPoint(coordinate);
+        if (this._needCrtl && !ctrlKey) this.adsorbPoint = null;
     };
 
     Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
@@ -6888,10 +6903,10 @@ var Autoadsorb = function (_maptalks$Class) {
             x = _map$coordinateToPoin.x,
             y = _map$coordinateToPoin.y;
 
-        var lt = this._pointToCoordinateWithZoom([x - distance, y - distance], zoom);
-        var rt = this._pointToCoordinateWithZoom([x + distance, y - distance], zoom);
-        var rb = this._pointToCoordinateWithZoom([x + distance, y + distance], zoom);
-        var lb = this._pointToCoordinateWithZoom([x - distance, y + distance], zoom);
+        var lt = this._pointToCoordWithZoom([x - distance, y - distance]);
+        var rt = this._pointToCoordWithZoom([x + distance, y - distance]);
+        var rb = this._pointToCoordWithZoom([x + distance, y + distance]);
+        var lb = this._pointToCoordWithZoom([x - distance, y + distance]);
         return {
             type: 'Feature',
             properties: {},
@@ -6902,8 +6917,9 @@ var Autoadsorb = function (_maptalks$Class) {
         };
     };
 
-    Autoadsorb.prototype._pointToCoordinateWithZoom = function _pointToCoordinateWithZoom(point, zoom) {
+    Autoadsorb.prototype._pointToCoordWithZoom = function _pointToCoordWithZoom(point) {
         var map = this._map;
+        var zoom = map.getZoom();
         return map.pointToCoordinate(new maptalks.Point(point), zoom);
     };
 
@@ -7227,6 +7243,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.3');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.4');
 
 })));
