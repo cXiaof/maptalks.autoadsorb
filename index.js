@@ -9,7 +9,7 @@ import flattenDeep from 'lodash/flattenDeep'
 const options = {
     mode: 'auto',
     distance: 10,
-    needCrtl: false
+    needCtrl: false
 }
 
 export class Autoadsorb extends maptalks.Class {
@@ -20,7 +20,7 @@ export class Autoadsorb extends maptalks.Class {
         this._isEnable = false
         this._updateModeType(options && options.mode)
         this._updateDistance(options && options.distance)
-        this._updateNeedCrtl(options && options.needCrtl)
+        this._updateNeedCtrl(options && options.needCtrl)
     }
 
     setLayer(layer) {
@@ -136,8 +136,8 @@ export class Autoadsorb extends maptalks.Class {
         return this._distance
     }
 
-    needCrtl(need) {
-        this._updateNeedCrtl(need)
+    needCtrl(need) {
+        this._updateNeedCtrl(need)
     }
 
     _updateModeType(mode) {
@@ -149,10 +149,10 @@ export class Autoadsorb extends maptalks.Class {
         this._distance = Math.max(distance, 1)
     }
 
-    _updateNeedCrtl(need) {
-        need = need !== undefined ? need : this.options['needCrtl']
-        need = need !== undefined ? need : options.needCrtl
-        this._needCrtl = need
+    _updateNeedCtrl(need) {
+        need = need !== undefined ? need : this.options['needCtrl']
+        need = need !== undefined ? need : options.needCtrl
+        this._needCtrl = need
     }
 
     _addTo(map) {
@@ -309,7 +309,7 @@ export class Autoadsorb extends maptalks.Class {
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
-        if (this._needCrtl && !ctrlKey) this.adsorbPoint = null
+        if (this._needCtrl !== ctrlKey) this.adsorbPoint = null
     }
 
     _updateAdsorbPoint(coordinate) {

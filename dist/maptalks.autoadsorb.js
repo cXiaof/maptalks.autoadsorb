@@ -6506,7 +6506,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var options = {
     mode: 'auto',
     distance: 10,
-    needCrtl: false
+    needCtrl: false
 };
 
 var Autoadsorb = function (_maptalks$Class) {
@@ -6522,7 +6522,7 @@ var Autoadsorb = function (_maptalks$Class) {
         _this._isEnable = false;
         _this._updateModeType(options && options.mode);
         _this._updateDistance(options && options.distance);
-        _this._updateNeedCrtl(options && options.needCrtl);
+        _this._updateNeedCtrl(options && options.needCtrl);
         return _this;
     }
 
@@ -6660,8 +6660,8 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._distance;
     };
 
-    Autoadsorb.prototype.needCrtl = function needCrtl(need) {
-        this._updateNeedCrtl(need);
+    Autoadsorb.prototype.needCtrl = function needCtrl(need) {
+        this._updateNeedCtrl(need);
     };
 
     Autoadsorb.prototype._updateModeType = function _updateModeType(mode) {
@@ -6673,10 +6673,10 @@ var Autoadsorb = function (_maptalks$Class) {
         this._distance = Math.max(distance, 1);
     };
 
-    Autoadsorb.prototype._updateNeedCrtl = function _updateNeedCrtl(need) {
-        need = need !== undefined ? need : this.options['needCrtl'];
-        need = need !== undefined ? need : options.needCrtl;
-        this._needCrtl = need;
+    Autoadsorb.prototype._updateNeedCtrl = function _updateNeedCtrl(need) {
+        need = need !== undefined ? need : this.options['needCtrl'];
+        need = need !== undefined ? need : options.needCtrl;
+        this._needCtrl = need;
     };
 
     Autoadsorb.prototype._addTo = function _addTo(map) {
@@ -6844,7 +6844,7 @@ var Autoadsorb = function (_maptalks$Class) {
         }).addTo(this._mousemoveLayer);
 
         this._updateAdsorbPoint(coordinate);
-        if (this._needCrtl && !ctrlKey) this.adsorbPoint = null;
+        if (this._needCtrl !== ctrlKey) this.adsorbPoint = null;
     };
 
     Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
