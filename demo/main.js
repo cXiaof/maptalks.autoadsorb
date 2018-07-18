@@ -66,6 +66,6 @@ new maptalks.control.Panel({
     draggable: true,
     custom: false,
     content:
-        '<div>· 右键图形：</div><div>开始/停止编辑</div><div>· contextmenu</div><div>on geometry to</div><div>start/end edit</div>',
+        '<div>· 右键图形：</div><div>开始/停止编辑</div><div>· 按住Ctrl：</div><div>打开/关闭吸附</div><div>· contextmenu</div><div>on geometry to</div><div>start/end edit</div><div>· try press Ctrl</div><div>open/close adsorb</div>',
     closeButton: true
 }).addTo(map)
