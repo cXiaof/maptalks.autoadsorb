@@ -113,7 +113,10 @@ export class Autoadsorb extends maptalks.Class {
         if (layer) layer.remove()
         delete this.geometry
         delete this.geometryCoords
+        delete this._geosSetPoint
+        delete this._geosSetLine
         delete this._mousemoveLayer
+        delete this._assistLayers
     }
 
     setMode(mode) {
@@ -138,6 +141,26 @@ export class Autoadsorb extends maptalks.Class {
 
     needCtrl(need) {
         this._updateNeedCtrl(need)
+    }
+
+    setAssistGeosLayer(layerNames) {
+        if (layerNames) {
+            const map = this._map
+            if (!(layerNames instanceof Array)) layerNames = [layerNames]
+            let arr = []
+            const adsorb = this.adsorblayer.getId()
+            layerNames.forEach((name) => {
+                if (name !== adsorb) {
+                    const layer = map.getLayer(name)
+                    if (layer instanceof maptalks.VectorLayer) arr.push(name)
+                }
+            })
+            if (arr.length > 0) this._assistLayers = arr
+        } else {
+            this._assistLayers = undefined
+        }
+        this._updateGeosSet()
+        return this
     }
 
     _updateModeType(mode) {
@@ -166,7 +189,7 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _updateGeosSet() {
-        const geometries = this.adsorblayer.getGeometries()
+        const geometries = this._getGeosSet()
         const modeAuto = this._mode === 'auto'
         const modeVertux = this._mode === 'vertux'
         const modeBorder = this._mode === 'border'
@@ -184,6 +207,13 @@ export class Autoadsorb extends maptalks.Class {
         })
         this._geosSetPoint = geosPoint
         this._geosSetLine = geosLine
+    }
+
+    _getGeosSet() {
+        let geos = this.adsorblayer.getGeometries()
+        if (this._assistLayers)
+            this._assistLayers.forEach((name) => geos.push(...map.getLayer(name).getGeometries()))
+        return geos
     }
 
     _parseToPoints(geo) {
