@@ -337,43 +337,28 @@ export class Autoadsorb extends maptalks.Class {
             availGeos.features.push(...geos)
         }
         if (this._geosSetLine) {
-            const geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 2)
+            const geos = this._findAvailGeos(this._geosSetLine, coordinate)
             availGeos.features.push(...geos)
         }
         return availGeos
     }
 
-    _findAvailGeos(features, coordinate, distance = this._distance) {
+    _findAvailGeos(features, coordinate) {
         this.tree.clear()
         this.tree.load({ type: 'FeatureCollection', features })
-        const inspectExtent = this._createInspectExtent(coordinate, distance)
+        const inspectExtent = this._createInspectExtent(coordinate)
         const availGeos = this.tree.search(inspectExtent)
         return availGeos.features
     }
 
-    _createInspectExtent(coordinate, distance) {
-        distance = Math.max(parseInt(distance, 0), 1)
+    _createInspectExtent(coordinate) {
+        const distance = Math.max(parseInt(this._distance, 0), 1)
         const map = this._map
-        const zoom = map.getZoom()
-        const { x, y } = map.coordinateToPoint(coordinate, zoom)
-        const lt = this._pointToCoordWithZoom([x - distance, y - distance])
-        const rt = this._pointToCoordWithZoom([x + distance, y - distance])
-        const rb = this._pointToCoordWithZoom([x + distance, y + distance])
-        const lb = this._pointToCoordWithZoom([x - distance, y + distance])
-        return {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-                type: 'Polygon',
-                coordinates: [[[lt.x, lt.y], [rt.x, rt.y], [rb.x, rb.y], [lb.x, lb.y]]]
-            }
-        }
-    }
-
-    _pointToCoordWithZoom(point) {
-        const map = this._map
-        const zoom = map.getZoom()
-        return map.pointToCoordinate(new maptalks.Point(point), zoom)
+        const _radius = map.pixelToDistance(0, distance)
+        const circleFeature = new maptalks.Circle(coordinate, _radius, {
+            properties: {}
+        }).toGeoJSON()
+        return circleFeature
     }
 
     _getAdsorbPoint(availGeos) {

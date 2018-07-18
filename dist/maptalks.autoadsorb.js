@@ -6878,49 +6878,28 @@ var Autoadsorb = function (_maptalks$Class) {
         if (this._geosSetLine) {
             var _availGeos$features2;
 
-            var _geos = this._findAvailGeos(this._geosSetLine, coordinate, this._distance / 2);
+            var _geos = this._findAvailGeos(this._geosSetLine, coordinate);
             (_availGeos$features2 = availGeos.features).push.apply(_availGeos$features2, _geos);
         }
         return availGeos;
     };
 
     Autoadsorb.prototype._findAvailGeos = function _findAvailGeos(features, coordinate) {
-        var distance = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this._distance;
-
         this.tree.clear();
         this.tree.load({ type: 'FeatureCollection', features: features });
-        var inspectExtent = this._createInspectExtent(coordinate, distance);
+        var inspectExtent = this._createInspectExtent(coordinate);
         var availGeos = this.tree.search(inspectExtent);
         return availGeos.features;
     };
 
-    Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate, distance) {
-        distance = Math.max(parseInt(distance, 0), 1);
+    Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
+        var distance = Math.max(parseInt(this._distance, 0), 1);
         var map = this._map;
-        var zoom = map.getZoom();
-
-        var _map$coordinateToPoin = map.coordinateToPoint(coordinate, zoom),
-            x = _map$coordinateToPoin.x,
-            y = _map$coordinateToPoin.y;
-
-        var lt = this._pointToCoordWithZoom([x - distance, y - distance]);
-        var rt = this._pointToCoordWithZoom([x + distance, y - distance]);
-        var rb = this._pointToCoordWithZoom([x + distance, y + distance]);
-        var lb = this._pointToCoordWithZoom([x - distance, y + distance]);
-        return {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-                type: 'Polygon',
-                coordinates: [[[lt.x, lt.y], [rt.x, rt.y], [rb.x, rb.y], [lb.x, lb.y]]]
-            }
-        };
-    };
-
-    Autoadsorb.prototype._pointToCoordWithZoom = function _pointToCoordWithZoom(point) {
-        var map = this._map;
-        var zoom = map.getZoom();
-        return map.pointToCoordinate(new maptalks.Point(point), zoom);
+        var _radius = map.pixelToDistance(0, distance);
+        var circleFeature = new maptalks.Circle(coordinate, _radius, {
+            properties: {}
+        }).toGeoJSON();
+        return circleFeature;
     };
 
     Autoadsorb.prototype._getAdsorbPoint = function _getAdsorbPoint(availGeos) {
