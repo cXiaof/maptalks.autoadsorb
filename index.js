@@ -18,9 +18,9 @@ export class Autoadsorb extends maptalks.Class {
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
-        this._updateModeType(options && options.mode)
-        this._updateDistance(options && options.distance)
-        this._updateNeedCtrl(options && options.needCtrl)
+        this._updateModeType()
+        this._updateDistance()
+        this._updateNeedCtrl()
     }
 
     setLayer(layer) {
@@ -50,6 +50,7 @@ export class Autoadsorb extends maptalks.Class {
         if (geometry instanceof maptalks.Geometry) {
             const layer = geometry._layer
             const map = layer.map
+            if (map._map_tool && map._map_tool instanceof maptalks.DrawTool) map._map_tool.disable()
             this._addTo(map)
             this.adsorblayer = layer
             this.bindGeometry(geometry)
@@ -340,7 +341,7 @@ export class Autoadsorb extends maptalks.Class {
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
-        if (this._needCtrl !== ctrlKey) this.adsorbPoint = null
+        if (this._needCtrl !== ctrlKey || this._hasAddVertux) this.adsorbPoint = null
     }
 
     _updateAdsorbPoint(coordinate) {
@@ -600,14 +601,17 @@ export class Autoadsorb extends maptalks.Class {
                     const coords0 = coords[0]
 
                     if (coords0 instanceof Array) {
-                        const coordsNew = differenceWith(coords0, coordsOld0, isEqual)[0]
-                        const coordsIndex = findIndex(coords0, coordsNew)
-                        const { length } = coords0
-                        coords[0][coordsIndex].x = x
-                        coords[0][coordsIndex].y = y
-                        if (coordsIndex === 0) {
-                            coords[0][length - 1].x = x
-                            coords[0][length - 1].y = y
+                        const coordsNew = differenceWith(coords0, coordsOld0, isEqual)
+                        if (coordsNew.length === 0) this._hasAddVertux = true
+                        else {
+                            const coordsIndex = findIndex(coords0, coordsNew[0])
+                            const { length } = coords0
+                            coords[0][coordsIndex].x = x
+                            coords[0][coordsIndex].y = y
+                            if (coordsIndex === 0) {
+                                coords[0][length - 1].x = x
+                                coords[0][length - 1].y = y
+                            }
                         }
                     } else {
                         const coordsNew = differenceWith(coords, this.geometryCoords, isEqual)[0]
@@ -616,8 +620,10 @@ export class Autoadsorb extends maptalks.Class {
                         coords[coordsIndex].y = y
                     }
                     this._needDeal = false
-                    this._upGeoCoords(coords)
-                    geo.setCoordinates(this.geometryCoords)
+                    if (!this._hasAddVertux) {
+                        this._upGeoCoords(coords)
+                        geo.setCoordinates(this.geometryCoords)
+                    }
                 }
             } else {
                 if (this.geometry instanceof maptalks.Circle) {
@@ -633,6 +639,7 @@ export class Autoadsorb extends maptalks.Class {
 
     _upGeoCoords(coords) {
         this.geometryCoords = coords
+        this._hasAddVertux = false
     }
 }
 

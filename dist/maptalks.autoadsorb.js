@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.1.0-beta.5
+ * maptalks.autoadsorb v0.1.0-beta.6
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -6520,9 +6520,9 @@ var Autoadsorb = function (_maptalks$Class) {
         _this.tree = geojsonRbush_1();
         _this._layerName = maptalks.INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
-        _this._updateModeType(options && options.mode);
-        _this._updateDistance(options && options.distance);
-        _this._updateNeedCtrl(options && options.needCtrl);
+        _this._updateModeType();
+        _this._updateDistance();
+        _this._updateNeedCtrl();
         return _this;
     }
 
@@ -6567,6 +6567,7 @@ var Autoadsorb = function (_maptalks$Class) {
         if (geometry instanceof maptalks.Geometry) {
             var layer = geometry._layer;
             var _map2 = layer.map;
+            if (_map2._map_tool && _map2._map_tool instanceof maptalks.DrawTool) _map2._map_tool.disable();
             this._addTo(_map2);
             this.adsorblayer = layer;
             this.bindGeometry(geometry);
@@ -6876,7 +6877,7 @@ var Autoadsorb = function (_maptalks$Class) {
         }).addTo(this._mousemoveLayer);
 
         this._updateAdsorbPoint(coordinate);
-        if (this._needCtrl !== ctrlKey) this.adsorbPoint = null;
+        if (this._needCtrl !== ctrlKey || this._hasAddVertux) this.adsorbPoint = null;
     };
 
     Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
@@ -7209,15 +7210,17 @@ var Autoadsorb = function (_maptalks$Class) {
                     var coords0 = coords[0];
 
                     if (coords0 instanceof Array) {
-                        var coordsNew = differenceWith_1(coords0, coordsOld0, isEqual_1)[0];
-                        var coordsIndex = findIndex_1(coords0, coordsNew);
-                        var length = coords0.length;
+                        var coordsNew = differenceWith_1(coords0, coordsOld0, isEqual_1);
+                        if (coordsNew.length === 0) this._hasAddVertux = true;else {
+                            var coordsIndex = findIndex_1(coords0, coordsNew[0]);
+                            var length = coords0.length;
 
-                        coords[0][coordsIndex].x = x;
-                        coords[0][coordsIndex].y = y;
-                        if (coordsIndex === 0) {
-                            coords[0][length - 1].x = x;
-                            coords[0][length - 1].y = y;
+                            coords[0][coordsIndex].x = x;
+                            coords[0][coordsIndex].y = y;
+                            if (coordsIndex === 0) {
+                                coords[0][length - 1].x = x;
+                                coords[0][length - 1].y = y;
+                            }
                         }
                     } else {
                         var _coordsNew = differenceWith_1(coords, this.geometryCoords, isEqual_1)[0];
@@ -7226,8 +7229,10 @@ var Autoadsorb = function (_maptalks$Class) {
                         coords[_coordsIndex].y = y;
                     }
                     this._needDeal = false;
-                    this._upGeoCoords(coords);
-                    geo.setCoordinates(this.geometryCoords);
+                    if (!this._hasAddVertux) {
+                        this._upGeoCoords(coords);
+                        geo.setCoordinates(this.geometryCoords);
+                    }
                 }
             } else {
                 if (this.geometry instanceof maptalks.Circle) {
@@ -7243,6 +7248,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._upGeoCoords = function _upGeoCoords(coords) {
         this.geometryCoords = coords;
+        this._hasAddVertux = false;
     };
 
     return Autoadsorb;
@@ -7254,6 +7260,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.5');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.1.0-beta.6');
 
 })));
