@@ -112,7 +112,6 @@ export class Autoadsorb extends maptalks.Class {
         this.disable()
         const layer = map.getLayer(this._layerName)
         if (layer) layer.remove()
-        delete this.adsorblayer
         delete this.geometry
         delete this.geometryCoords
         delete this._geosSetPoint

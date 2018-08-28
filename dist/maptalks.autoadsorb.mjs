@@ -6632,7 +6632,6 @@ var Autoadsorb = function (_maptalks$Class) {
         this.disable();
         var layer = map.getLayer(this._layerName);
         if (layer) layer.remove();
-        delete this.adsorblayer;
         delete this.geometry;
         delete this.geometryCoords;
         delete this._geosSetPoint;
