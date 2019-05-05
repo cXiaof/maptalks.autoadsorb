@@ -9,37 +9,39 @@ Adsorb vertux/border/both of geos on layer When drawing or editing,inspired on [
 ## Install
 
 -   Install with npm: `npm install maptalks.autoadsorb`.
+-   Install with yarn: `yarn add maptalks.autoadsorb`.
 -   Download from [dist directory](https://github.com/cXiaof/maptalks.autoadsorb/tree/master/dist).
--   Use unpkg CDN: `https://unpkg.com/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js`
+-   Use unpkg CDN: `https://cdn.jsdelivr.net/npm/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js`
 
 ## Usage
 
 As a plugin, `maptalks.autoadsorb` must be loaded after `maptalks.js` in browsers. You can also use `'import { Autoadsorb } from "maptalks.autoadsorb"` when developing with webpack.
 
 ```html
-<script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
-<script type="text/javascript" src="https://unpkg.com/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js"></script>
-<script>
-    // new drawTool and layer addTo map
-    const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
-    const layer = new maptalks.VectorLayer('v').addTo(map)
+<!-- ... -->
+<script src="https://cdn.jsdelivr.net/npm/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js"></script>
+<!-- ... -->
+```
 
-    // new Autoadsorb which default options { mode: 'auto', distance: 10 }
-    const autoAdsorb = new maptalks.Autoadsorb()
-    // or you can new it with options or set later
-    // const autoAdsorb = new maptalks.Autoadsorb({ mode: 'border', distance: 12 })
-    // autoAdsorb.setMode('vertux')
-    // autoAdsorb.setDistance(20)
+```javascript
+// new drawTool and layer addTo map
+const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
+const layer = new maptalks.VectorLayer('v').addTo(map)
+// new Autoadsorb which default options { mode: 'auto', distance: 10 }
+const autoAdsorb = new maptalks.Autoadsorb()
 
-    // If you want to use when drawing with DrawTool, you should bind the layer which you draw on.
-    autoAdsorb.setLayer(layer);
-    // If DrawTool is on map already, Autoadsorb will bindDrawTool auto. If not, you should do bindDrawTool after.
-    // autoAdsorb.bindDrawTool(drawTool);
+// or you can update one option later
+autoAdsorb.setMode('vertux')
+autoAdsorb.setDistance(20)
+autoAdsorb.needCtrl(true)
 
-    // If you want to use when editing one geometry, you should bind this geometry.
-    const geometry = new maptalks.Polygon([[...]]).addTo(layer)
-    autoAdsorb.setGeometry(geometry);
-</script>
+// If you want to use when drawing with DrawTool, you should bind the layer which you draw on.
+autoAdsorb.setLayer(layer)
+// If DrawTool is on map already, Autoadsorb will bindDrawTool auto. If not, you should do bindDrawTool after.
+autoAdsorb.bindDrawTool(drawTool)
+
+// If you want to use when editing one geometry, you should bind the geometry.
+autoAdsorb.setGeometry(geometry)
 ```
 
 ## API Reference
@@ -51,6 +53,7 @@ new maptalks.Autoadsorb(options)
 -   options **Object** options
     -   mode **String** there are three modes, auto/vertux/border, auto by default.
     -   distance **Number** the distance in pixel from mouse to the snap point, 10 by default.
+    -   needCtrl **Boolean** do adsorb only with Ctrl, default is false.
 
 `setLayer(layer)` specify a vectorlayer which drawing on.
 
@@ -60,13 +63,18 @@ new maptalks.Autoadsorb(options)
 
 `enable()` start adsorb
 `disable()` end adsorb
-`remove()` clear private object
+`toggleEnable()` toggle enable<=>disable
+`isEnable()` get enable status
 
 `setMode()` adsorb mode, 'vertux' will only adsorb Point ,'border' will only adsorb Line, and 'auto' will find both but may find Point only if Point and Line at very close
 `getMode()` get mode now
 
 `setDistance()` adsorb distance, used to set how far to find geometries around
 `getDistance()` get distance now
+
+`needCtrl(boolean)` update options.needCtrl
+
+`remove()` clear private object
 
 ## Contributing
 
@@ -90,18 +98,6 @@ $ npm install
 
 ```shell
 $ gulp watch
-```
-
--   Tests
-
-```shell
-$ npm test
-```
-
--   Watch source changes and run tests repeatedly
-
-```shell
-$ gulp tdd
 ```
 
 -   Package and generate minified bundles to dist directory

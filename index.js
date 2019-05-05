@@ -18,9 +18,9 @@ export class Autoadsorb extends maptalks.Class {
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
-        this._updateModeType()
-        this._updateDistance()
-        this._updateNeedCtrl()
+        this._updateModeType(options.mode)
+        this._updateDistance(options.distance)
+        this._updateNeedCtrl(options.needCtrl)
     }
 
     setLayer(layer) {
@@ -104,9 +104,8 @@ export class Autoadsorb extends maptalks.Class {
         return this._isEnable
     }
 
-    toggleable() {
-        if (this._isEnable) this.disable()
-        else this.enable()
+    toggleEnable() {
+        return this._isEnable ? this.disable() : this.enable()
     }
 
     remove() {
@@ -143,6 +142,7 @@ export class Autoadsorb extends maptalks.Class {
 
     needCtrl(need) {
         this._updateNeedCtrl(need)
+        return this
     }
 
     setAssistGeosLayer(layerNames) {

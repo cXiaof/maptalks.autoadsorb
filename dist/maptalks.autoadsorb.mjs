@@ -9258,9 +9258,9 @@ var Autoadsorb = function (_maptalks$Class) {
         _this.tree = geojsonRbush_1();
         _this._layerName = INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
-        _this._updateModeType();
-        _this._updateDistance();
-        _this._updateNeedCtrl();
+        _this._updateModeType(options.mode);
+        _this._updateDistance(options.distance);
+        _this._updateNeedCtrl(options.needCtrl);
         return _this;
     }
 
@@ -9366,8 +9366,8 @@ var Autoadsorb = function (_maptalks$Class) {
         return this._isEnable;
     };
 
-    Autoadsorb.prototype.toggleable = function toggleable() {
-        if (this._isEnable) this.disable();else this.enable();
+    Autoadsorb.prototype.toggleEnable = function toggleEnable() {
+        return this._isEnable ? this.disable() : this.enable();
     };
 
     Autoadsorb.prototype.remove = function remove() {
@@ -9404,6 +9404,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype.needCtrl = function needCtrl(need) {
         this._updateNeedCtrl(need);
+        return this;
     };
 
     Autoadsorb.prototype.setAssistGeosLayer = function setAssistGeosLayer(layerNames) {
