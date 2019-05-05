@@ -1,6 +1,6 @@
 {
   "name": "maptalks.autoadsorb",
-  "version": "0.1.0-beta.6",
+  "version": "0.1.0",
   "description": "Adsorb vertux/border/both of geos on layer When drawing or editing",
   "license": "MIT",
   "author": "cXiaof",
@@ -9,27 +9,36 @@
     "url": "https://github.com/cXiaof/maptalks.autoadsorb.git"
   },
   "main": "dist/maptalks.autoadsorb.min.js",
-  "keywords": ["maptalks", "autoadsorb"],
+  "keywords": [
+    "maptalks",
+    "autoadsorb",
+    "adsorb",
+    "snap",
+    "snapto"
+  ],
   "bugs": {
     "url": "https://github.com/cXiaof/maptalks.autoadsorb/issues"
   },
   "homepage": "https://github.com/cXiaof/maptalks.autoadsorb",
   "scripts": {
-    "version": "gulp minify && git add -A dist",
     "prepublish": "gulp minify",
     "b": "gulp minify",
     "watch": "gulp watch",
     "w": "gulp watch"
   },
-  "devDependencies": {
-    "babel-eslint": "^8.2.6",
-    "babel-preset-env": "^1.7.0",
-    "gulp": "^3.9.1",
-    "maptalks": "^0.40.5",
-    "maptalks-build-helpers": "^0.5.0"
-  },
   "dependencies": {
     "geojson-rbush": "^3.1.1",
-    "lodash": "^4.17.10"
+    "lodash.differencewith": "^4.5.0",
+    "lodash.findindex": "^4.6.0",
+    "lodash.flattendeep": "^4.4.0",
+    "lodash.includes": "^4.3.0",
+    "lodash.isequal": "^4.5.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "babel-preset-env": "^1.7.0",
+    "gulp": "^4.0.1",
+    "maptalks": "^0.44.0",
+    "maptalks-build-helpers": "^0.5.0"
   }
 }
