@@ -9262,9 +9262,9 @@ var Autoadsorb = function (_maptalks$Class) {
         _this.tree = geojsonRbush_1();
         _this._layerName = maptalks.INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
-        _this._updateModeType(options.mode);
-        _this._updateDistance(options.distance);
-        _this._updateNeedCtrl(options.needCtrl);
+        _this._updateModeType();
+        _this._updateDistance();
+        _this._updateNeedCtrl();
         return _this;
     }
 

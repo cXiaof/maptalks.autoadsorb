@@ -18,9 +18,9 @@ export class Autoadsorb extends maptalks.Class {
         this.tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
-        this._updateModeType(options.mode)
-        this._updateDistance(options.distance)
-        this._updateNeedCtrl(options.needCtrl)
+        this._updateModeType()
+        this._updateDistance()
+        this._updateNeedCtrl()
     }
 
     setLayer(layer) {
