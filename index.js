@@ -569,10 +569,13 @@ export class Autoadsorb extends maptalks.Class {
                     geo.setCoordinates(coords)
                 } else {
                     if (geo instanceof maptalks.Circle) {
-                        const radius = this._map
-                            .getProjection()
-                            .measureLength([coords, this.adsorbPoint])
+                        const projection = this._map.getProjection()
+                        const radius = projection.measureLength([
+                            coords,
+                            this.adsorbPoint
+                        ])
                         geo.setRadius(radius)
+                        geo.setCoordinates(projection.unproject(geo._pcenter))
                     }
                 }
             }
@@ -585,7 +588,8 @@ export class Autoadsorb extends maptalks.Class {
                 clickCoords instanceof maptalks.Coordinate ||
                 clickCoords instanceof Array
             ) {
-                const { x, y } = this.adsorbPoint
+                const point = this._map.coordToPoint(this.adsorbPoint)
+                const { x, y } = this._map._pointToPrj(point)
                 const { length } = clickCoords
                 if (length) {
                     clickCoords[length - 1].x = x
@@ -593,15 +597,6 @@ export class Autoadsorb extends maptalks.Class {
                 } else {
                     clickCoords.x = x
                     clickCoords.y = y
-                }
-            } else if (clickCoords) {
-                const geo = clickCoords.geometry
-                if (geo instanceof maptalks.Circle) {
-                    const center = geo.getCoordinates()
-                    const radius = this._map
-                        .getProjection()
-                        .measureLength([center, this.adsorbPoint])
-                    geo.setRadius(radius)
                 }
             }
         }
