@@ -28,8 +28,8 @@ export class Autoadsorb extends maptalks.Class {
             const map = layer.map
             this._addTo(map)
             this.adsorblayer = layer
-            this.adsorblayer.on('addgeo', () => this._updateGeosSet(), this)
-            this.adsorblayer.on('clear', () => this._resetGeosSet(), this)
+            this.adsorblayer.on('addgeo', this._updateGeosSet, this)
+            this.adsorblayer.on('clear', this._resetGeosSet, this)
             this.bindDrawTool(map._map_tool)
         }
         return this
@@ -38,9 +38,9 @@ export class Autoadsorb extends maptalks.Class {
     bindDrawTool(drawTool) {
         if (drawTool instanceof maptalks.DrawTool) {
             this.drawTool = drawTool
-            drawTool.on('enable', (e) => this.enable(), this)
-            drawTool.on('disable', (e) => this.disable(), this)
-            drawTool.on('remove', (e) => this.remove(), this)
+            drawTool.on('enable', this.enable, this)
+            drawTool.on('disable', this.disable, this)
+            drawTool.on('remove', this.remove, this)
             if (drawTool.isEnabled()) this.enable()
         }
         return this
@@ -64,9 +64,9 @@ export class Autoadsorb extends maptalks.Class {
             if (this.geometry) return this.setGeometry(geometry)
             this.geometry = geometry
             this.geometryCoords = geometry.getCoordinates()
-            geometry.on('editstart', (e) => this.enable(), this)
-            geometry.on('editend', (e) => this.disable(), this)
-            geometry.on('remove', (e) => this.remove(), this)
+            geometry.on('editstart', this.enable, this)
+            geometry.on('editend', this.disable, this)
+            geometry.on('remove', this.remove, this)
             if (geometry.isEditing()) {
                 geometry.endEdit()
                 this.enable()

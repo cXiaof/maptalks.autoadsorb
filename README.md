@@ -35,13 +35,16 @@ autoAdsorb.setMode('vertux')
 autoAdsorb.setDistance(20)
 autoAdsorb.needCtrl(true)
 
-// If you want to use when drawing with DrawTool, you should bind the layer which you draw on.
+// Use when drawing with DrawTool, you should bind the layer which you draw on.
 autoAdsorb.setLayer(layer)
 // If DrawTool is on map already, Autoadsorb will bindDrawTool auto. If not, you should do bindDrawTool after.
 autoAdsorb.bindDrawTool(drawTool)
 
-// If you want to use when editing one geometry, you should bind the geometry.
+// Use when editing one geometry, you should bind the geometry.
 autoAdsorb.setGeometry(geometry)
+
+// Capture geos on more layers.
+autoAdsorb.setAssistGeosLayer(['v1', 'v2'])
 ```
 
 ## API Reference
@@ -60,6 +63,8 @@ new maptalks.Autoadsorb(options)
 `bindDrawTool(drawtool)` When interacting with a drawtool, you should bind the drawtool.
 
 `setGeometry(geometry)` specify a geometry which need edited.
+
+`setAssistGeosLayer(layerNames[])` set more layers to which geos can be attached.
 
 `enable()` start adsorb
 `disable()` end adsorb

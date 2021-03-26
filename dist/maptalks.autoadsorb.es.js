@@ -9244,37 +9244,23 @@ var Autoadsorb = function (_maptalks$Class) {
     }
 
     Autoadsorb.prototype.setLayer = function setLayer(layer) {
-        var _this2 = this;
-
         if (layer instanceof VectorLayer) {
             var _map = layer.map;
             this._addTo(_map);
             this.adsorblayer = layer;
-            this.adsorblayer.on('addgeo', function () {
-                return _this2._updateGeosSet();
-            }, this);
-            this.adsorblayer.on('clear', function () {
-                return _this2._resetGeosSet();
-            }, this);
+            this.adsorblayer.on('addgeo', this._updateGeosSet, this);
+            this.adsorblayer.on('clear', this._resetGeosSet, this);
             this.bindDrawTool(_map._map_tool);
         }
         return this;
     };
 
     Autoadsorb.prototype.bindDrawTool = function bindDrawTool(drawTool) {
-        var _this3 = this;
-
         if (drawTool instanceof DrawTool) {
             this.drawTool = drawTool;
-            drawTool.on('enable', function (e) {
-                return _this3.enable();
-            }, this);
-            drawTool.on('disable', function (e) {
-                return _this3.disable();
-            }, this);
-            drawTool.on('remove', function (e) {
-                return _this3.remove();
-            }, this);
+            drawTool.on('enable', this.enable, this);
+            drawTool.on('disable', this.disable, this);
+            drawTool.on('remove', this.remove, this);
             if (drawTool.isEnabled()) this.enable();
         }
         return this;
@@ -9293,21 +9279,13 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
-        var _this4 = this;
-
         if (geometry instanceof Geometry) {
             if (this.geometry) return this.setGeometry(geometry);
             this.geometry = geometry;
             this.geometryCoords = geometry.getCoordinates();
-            geometry.on('editstart', function (e) {
-                return _this4.enable();
-            }, this);
-            geometry.on('editend', function (e) {
-                return _this4.disable();
-            }, this);
-            geometry.on('remove', function (e) {
-                return _this4.remove();
-            }, this);
+            geometry.on('editstart', this.enable, this);
+            geometry.on('editend', this.disable, this);
+            geometry.on('remove', this.remove, this);
             if (geometry.isEditing()) {
                 geometry.endEdit();
                 this.enable();
@@ -9427,7 +9405,7 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
-        var _this5 = this;
+        var _this2 = this;
 
         var geometries = this._getGeosSet();
         var modeAuto = this._mode === 'auto';
@@ -9436,8 +9414,8 @@ var Autoadsorb = function (_maptalks$Class) {
         var geosPoint = [];
         var geosLine = [];
         geometries.forEach(function (geo) {
-            if (modeAuto || modeVertux) geosPoint.push.apply(geosPoint, _this5._parseToPoints(geo));
-            if (modeAuto || modeBorder) _this5._parseToLines(geo).forEach(function (item) {
+            if (modeAuto || modeVertux) geosPoint.push.apply(geosPoint, _this2._parseToPoints(geo));
+            if (modeAuto || modeBorder) _this2._parseToLines(geo).forEach(function (item) {
                 if (item.geometry.type === 'Point') geosPoint.push(item);else geosLine.push(item);
             });
         });
@@ -9454,13 +9432,13 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._parseToPoints = function _parseToPoints(geo) {
-        var _this6 = this;
+        var _this3 = this;
 
         if (this._skipGeoSelf(geo)) return [];
         var geos = [];
         var coordinates = geo.getCoordinates();
         if (coordinates[0] instanceof Array) coordinates.forEach(function (coords) {
-            return geos.push.apply(geos, _this6._createMarkers(coords));
+            return geos.push.apply(geos, _this3._createMarkers(coords));
         });else {
             if (!(coordinates instanceof Array)) coordinates = [coordinates];
             geos.push.apply(geos, this._createMarkers(coordinates));
@@ -9491,7 +9469,7 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._parsePolygonToLine = function _parsePolygonToLine(geo) {
-        var _this7 = this;
+        var _this4 = this;
 
         var coordinates = geo.getCoordinates();
         var geos = [];
@@ -9500,13 +9478,13 @@ var Autoadsorb = function (_maptalks$Class) {
                 case 'MultiPolygon':
                     coordinates.forEach(function (coords) {
                         return coords.forEach(function (coordsItem) {
-                            return geos.push.apply(geos, _this7._createLine(coordsItem, geo));
+                            return geos.push.apply(geos, _this4._createLine(coordsItem, geo));
                         });
                     });
                     break;
                 case 'Polygon':
                     coordinates.forEach(function (coords) {
-                        return geos.push.apply(geos, _this7._createLine(coords, geo));
+                        return geos.push.apply(geos, _this4._createLine(coords, geo));
                     });
                     break;
                 default:
@@ -9544,20 +9522,20 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._registerMapEvents = function _registerMapEvents() {
-        var _this8 = this;
+        var _this5 = this;
 
         if (!this._mousemove) {
             var _map4 = this._map;
             this._mousemove = function (e) {
-                return _this8._mousemoveEvents(e);
+                return _this5._mousemoveEvents(e);
             };
             this._mousedown = function () {
-                if (_this8.drawTool) _this8._needFindGeometry = false;
-                if (_this8.geometry) _this8._needFindGeometry = true;
+                if (_this5.drawTool) _this5._needFindGeometry = false;
+                if (_this5.geometry) _this5._needFindGeometry = true;
             };
             this._mouseup = function () {
-                if (_this8.drawTool) _this8._needFindGeometry = true;
-                if (_this8.geometry) _this8._needFindGeometry = false;
+                if (_this5.drawTool) _this5._needFindGeometry = true;
+                if (_this5.geometry) _this5._needFindGeometry = false;
             };
             _map4.on('mousemove touchstart', this._mousemove, this);
             _map4.on('mousedown', this._mousedown, this);
@@ -9680,7 +9658,7 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._setDistance = function _setDistance(features) {
-        var _this9 = this;
+        var _this6 = this;
 
         var noPoint = features.findIndex(function (feature) {
             return feature.geometry.type === 'Point';
@@ -9689,10 +9667,10 @@ var Autoadsorb = function (_maptalks$Class) {
             var distance = void 0;
             switch (geoObject.geometry.type) {
                 case 'Point':
-                    distance = _this9._distToPoint(geoObject);
+                    distance = _this6._distToPoint(geoObject);
                     break;
                 case 'LineString':
-                    if (noPoint) distance = _this9._distToPolyline(geoObject);
+                    if (noPoint) distance = _this6._distToPolyline(geoObject);
                     break;
                 default:
                     break;
