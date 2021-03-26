@@ -9,17 +9,17 @@ const map = new maptalks.Map('map', {
         attribution:
             '&copy; <a href="http://osm.org">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/">CARTO</a>',
         maxAvailableZoom: 18,
-        placeholder: true
+        placeholder: true,
     }),
     scaleControl: { position: 'bottom-right', metric: true, imperial: true },
     zoomControl: {
         position: { top: 80, right: 20 },
         slider: false,
-        zoomLevel: true
+        zoomLevel: true,
     },
     spatialReference: {
         projection: 'EPSG:3857',
-        resolutions: (function() {
+        resolutions: (function () {
             const resolutions = []
             const d = 2 * 6378137 * Math.PI
             for (let i = 0; i < 22; i++) {
@@ -31,12 +31,12 @@ const map = new maptalks.Map('map', {
             top: 6378137 * Math.PI,
             bottom: -6378137 * Math.PI,
             left: -6378137 * Math.PI,
-            right: 6378137 * Math.PI
-        }
-    }
+            right: 6378137 * Math.PI,
+        },
+    },
 })
 new maptalks.CompassControl({
-    position: 'top-right'
+    position: 'top-right',
 }).addTo(map)
 
 const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
@@ -72,25 +72,25 @@ const toolbar = new maptalks.control.Toolbar({
             item: 'Draw',
             children: modesDraw.map((item) => ({
                 item,
-                click: () => drawTool.setMode(item).enable()
-            }))
+                click: () => drawTool.setMode(item).enable(),
+            })),
         },
         {
             item: 'Stop Drawing',
-            click: () => drawTool.disable()
+            click: () => drawTool.disable(),
         },
         {
             item: 'Choose Mode',
             children: modesPlug.map((item) => ({
                 item,
-                click: () => autoAdsorb.setMode(item)
-            }))
+                click: () => autoAdsorb.setMode(item),
+            })),
         },
         {
             item: 'Clear',
-            click: () => layerSketch.clear()
-        }
-    ]
+            click: () => layerSketch.clear(),
+        },
+    ],
 }).addTo(map)
 
 // new tip Panel
@@ -110,5 +110,5 @@ new maptalks.control.Panel({
         点击<b>Choose Mode</b>里的选项去尝试仅吸附点或是边的模式。<br />
         右键图形可以尝试在编辑时吸附，右键可以编辑或是停止编辑。<br />
     `,
-    closeButton: true
+    closeButton: true,
 }).addTo(map)

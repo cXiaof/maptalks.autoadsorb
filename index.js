@@ -9,7 +9,7 @@ import flattenDeep from 'lodash.flattendeep'
 const options = {
     mode: 'auto',
     distance: 10,
-    needCtrl: false
+    needCtrl: false,
 }
 
 export class Autoadsorb extends maptalks.Class {
@@ -293,7 +293,7 @@ export class Autoadsorb extends maptalks.Class {
         for (let i = 0; i < coords.length - 1; i++) {
             const coordinates = [coords[i], coords[i + 1]]
             const feature = new maptalks.LineString(coordinates, {
-                properties: { obj: geo }
+                properties: { obj: geo },
             }).toGeoJSON()
             lines.push(feature)
         }
@@ -339,7 +339,7 @@ export class Autoadsorb extends maptalks.Class {
         if (this._marker) this._marker.setCoordinates(coordinate)
         else
             this._marker = new maptalks.Marker(coordinate, {
-                symbol: {}
+                symbol: {},
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
@@ -389,7 +389,7 @@ export class Autoadsorb extends maptalks.Class {
         const distance = Math.max(parseInt(this._distance, 0), 1)
         const _radius = this._map.pixelToDistance(0, distance)
         const circleFeature = new maptalks.Circle(coordinate, _radius, {
-            properties: {}
+            properties: {},
         }).toGeoJSON()
         return circleFeature
     }
@@ -477,7 +477,7 @@ export class Autoadsorb extends maptalks.Class {
         return {
             A: k,
             B: -1,
-            C: startY - k * startX
+            C: startY - k * startX,
         }
     }
 
@@ -486,7 +486,7 @@ export class Autoadsorb extends maptalks.Class {
         return {
             A: k,
             B: -1,
-            C: y - k * x
+            C: y - k * x,
         }
     }
 
@@ -504,86 +504,80 @@ export class Autoadsorb extends maptalks.Class {
 
     _registerDrawToolEvents() {
         const drawTool = this.drawTool
-        drawTool.on('drawstart', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on(
-            'mousemove',
-            (e) => this._resetCoordinates(e.target._geometry || e),
-            this
-        )
-        drawTool.on('drawvertex', (e) => this._resetCoordsAndPoint(e), this)
-        drawTool.on(
-            'drawend',
-            (e) => this._resetCoordinates(e.geometry || e),
-            this
-        )
+        drawTool.on('drawstart', this._resetCoordsAndPoint, this)
+        drawTool.on('mousemove', this._resetCoordinates, this)
+        drawTool.on('drawvertex', this._resetCoordsAndPoint, this)
+        drawTool.on('drawend', this._resetCoordinates, this)
     }
 
     _offDrawToolEvents() {
         if (this.drawTool) {
             const drawTool = this.drawTool
-            drawTool.off('drawstart', (e) => this._resetCoordsAndPoint, this)
-            drawTool.off('mousemove', (e) => this._resetCoordinates, this)
-            drawTool.off('drawvertex', (e) => this._resetCoordsAndPoint, this)
-            drawTool.off('drawend', (e) => this._resetCoordinates, this)
+            drawTool.off('drawstart', this._resetCoordsAndPoint, this)
+            drawTool.off('mousemove', this._resetCoordinates, this)
+            drawTool.off('drawvertex', this._resetCoordsAndPoint, this)
+            drawTool.off('drawend', this._resetCoordinates, this)
         }
     }
 
     _registerGeometryEvents() {
         const geometry = this.geometry
-        geometry.on(
-            'shapechange',
-            (e) => this._setEditCoordinates(e.target),
-            this
-        )
-        geometry.on(
-            'editrecord',
-            (e) => this._upGeoCoords(e.target.getCoordinates()),
-            this
-        )
+        geometry.on('shapechange', this._setEditCoordinates, this)
+        geometry.on('editrecord', this._upGeoCoords, this)
     }
 
     _offGeometryEvents() {
         if (this.geometry) {
             const geometry = this.geometry
-            geometry.off('shapechange', (e) => this._setEditCoordinates, this)
-            geometry.off('editrecord', (e) => this._upGeoCoords, this)
+            geometry.off('shapechange', this._setEditCoordinates, this)
+            geometry.off('editrecord', this._upGeoCoords, this)
         }
     }
 
     _resetCoordsAndPoint(e) {
-        this._resetCoordinates(e.target._geometry || e)
-        this._resetClickPoint(e.target._clickCoords)
+        this._resetCoordinates(e)
+        this._resetClickPoint(e)
     }
 
-    _resetCoordinates(geo) {
+    _resetCoordinates(e) {
         if (this.adsorbPoint) {
+            const { options, _geometry } = e.target
+            const { mode } = options
+            const geo = _geometry
             const { x, y } = this.adsorbPoint
             if (geo instanceof maptalks.Geometry) {
                 const coords = geo.getCoordinates()
                 if (coords instanceof Array) {
-                    const { length } = coords
-                    if (length) {
-                        coords[length - 1].x = x
-                        coords[length - 1].y = y
+                    if (mode === 'Rectangle') {
+                        if (coords[0].length > 0) {
+                            coords[0][1].x = x
+                            coords[0][2].x = x
+                            coords[0][2].y = y
+                            coords[0][3].y = y
+                        }
+                    } else {
+                        const { length } = coords
+                        if (length) {
+                            coords[length - 1].x = x
+                            coords[length - 1].y = y
+                        }
                     }
                     geo.setCoordinates(coords)
                 } else {
-                    if (geo instanceof maptalks.Circle) {
-                        const projection = this._map.getProjection()
-                        const radius = projection.measureLength([
-                            coords,
-                            this.adsorbPoint
-                        ])
-                        geo.setRadius(radius)
-                        geo.setCoordinates(projection.unproject(geo._pcenter))
+                    if (mode === 'Circle') {
+                        const radius = this._map
+                            .getProjection()
+                            .measureLength([coords, this.adsorbPoint])
+                        geo.setRadius(radius)._updateCache()
                     }
                 }
             }
         }
     }
 
-    _resetClickPoint(clickCoords) {
+    _resetClickPoint(e) {
         if (this.adsorbPoint) {
+            const clickCoords = e.target._clickCoords
             if (
                 clickCoords instanceof maptalks.Coordinate ||
                 clickCoords instanceof Array
@@ -602,12 +596,13 @@ export class Autoadsorb extends maptalks.Class {
         }
     }
 
-    _setEditCoordinates(geo) {
+    _setEditCoordinates(e) {
         if (
             this.adsorbPoint &&
             this._needDeal &&
             this.geometry.type !== 'MultiPolygon'
         ) {
+            const geo = e.target
             const { x, y } = this.adsorbPoint
             if (this.geometryCoords instanceof Array) {
                 const coordsOld0 = this.geometryCoords[0]
@@ -644,8 +639,8 @@ export class Autoadsorb extends maptalks.Class {
                     }
                     this._needDeal = false
                     if (!this._hasAddVertux) {
-                        this._upGeoCoords(coords)
-                        geo.setCoordinates(this.geometryCoords)
+                        geo.setCoordinates(coords)
+                        this._upGeoCoords({ target: geo })
                     }
                 }
             } else {
@@ -661,8 +656,8 @@ export class Autoadsorb extends maptalks.Class {
         }
     }
 
-    _upGeoCoords(coords) {
-        this.geometryCoords = coords
+    _upGeoCoords({ target }) {
+        this.geometryCoords = target.getCoordinates()
         this._hasAddVertux = false
     }
 }
