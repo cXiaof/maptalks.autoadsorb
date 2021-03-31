@@ -67,14 +67,19 @@ new maptalks.Autoadsorb(options)
 `setAssistGeosLayer(layerNames[])` set more layers to which geos can be attached.
 
 `enable()` start adsorb
+
 `disable()` end adsorb
+
 `toggleEnable()` toggle enable<=>disable
+
 `isEnable()` get enable status
 
 `setMode()` adsorb mode, 'vertux' will only adsorb Point ,'border' will only adsorb Line, and 'auto' will find both but may find Point only if Point and Line at very close
+
 `getMode()` get mode now
 
 `setDistance()` adsorb distance, used to set how far to find geometries around
+
 `getDistance()` get distance now
 
 `needCtrl(boolean)` update options.needCtrl
