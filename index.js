@@ -343,8 +343,7 @@ export class Autoadsorb extends maptalks.Class {
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
-        if (this._needCtrl !== domEvent.ctrlKey || this._hasAddVertux)
-            this.adsorbPoint = null
+        if (this._needCtrl !== domEvent.ctrlKey) this.adsorbPoint = null
     }
 
     _updateAdsorbPoint(coordinate) {
@@ -610,13 +609,14 @@ export class Autoadsorb extends maptalks.Class {
                     const coords = geo.getCoordinates()
                     const coords0 = coords[0]
 
+                    let doUpdateShadow = true
                     if (coords0 instanceof Array) {
                         const coordsNew = differenceWith(
                             coords0,
                             coordsOld0,
                             isEqual
                         )
-                        if (coordsNew.length === 0) this._hasAddVertux = true
+                        if (coordsNew.length === 0) doUpdateShadow = false
                         else {
                             const coordsIndex = findIndex(coords0, coordsNew[0])
                             const { length } = coords0
@@ -638,10 +638,8 @@ export class Autoadsorb extends maptalks.Class {
                         coords[coordsIndex].y = y
                     }
                     this._needDeal = false
-                    if (!this._hasAddVertux) {
-                        geo.setCoordinates(coords)
-                        this._upGeoCoords({ target: geo })
-                    }
+                    if (doUpdateShadow)
+                        geo._editor._shadow.setCoordinates(coords)
                 }
             } else {
                 if (this.geometry instanceof maptalks.Circle) {
@@ -650,7 +648,7 @@ export class Autoadsorb extends maptalks.Class {
                     const radius = this._map
                         .getProjection()
                         .measureLength([center, this.adsorbPoint])
-                    geo.setRadius(radius)
+                    geo._editor._shadow.setRadius(radius)
                 }
             }
         }
@@ -658,7 +656,6 @@ export class Autoadsorb extends maptalks.Class {
 
     _upGeoCoords({ target }) {
         this.geometryCoords = target.getCoordinates()
-        this._hasAddVertux = false
     }
 }
 

@@ -1,7 +1,7 @@
 /*!
- * maptalks.autoadsorb v0.2.0
+ * maptalks.autoadsorb v0.3.0
  * LICENSE : MIT
- * (c) 2016-2021 maptalks.org
+ * (c) 2016-2022 maptalks.org
  */
 /*!
  * requires maptalks@>=0.47.0 
@@ -12,124 +12,93 @@
 	(factory((global.maptalks = global.maptalks || {}),global.maptalks));
 }(this, (function (exports,maptalks) { 'use strict';
 
-var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
-
-
-
-
-function createCommonjsModule(fn, module) {
-	return module = { exports: {} }, fn(module, module.exports), module.exports;
+function quickselect(arr, k, left, right, compare) {
+    quickselectStep(arr, k, left || 0, right || arr.length - 1, compare || defaultCompare);
 }
 
-var quickselect = createCommonjsModule(function (module, exports) {
-    (function (global, factory) {
-        module.exports = factory();
-    })(commonjsGlobal, function () {
-        'use strict';
+function quickselectStep(arr, k, left, right, compare) {
 
-        function quickselect(arr, k, left, right, compare) {
-            quickselectStep(arr, k, left || 0, right || arr.length - 1, compare || defaultCompare);
+    while (right > left) {
+        if (right - left > 600) {
+            var n = right - left + 1;
+            var m = k - left + 1;
+            var z = Math.log(n);
+            var s = 0.5 * Math.exp(2 * z / 3);
+            var sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
+            var newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
+            var newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
+            quickselectStep(arr, k, newLeft, newRight, compare);
         }
 
-        function quickselectStep(arr, k, left, right, compare) {
+        var t = arr[k];
+        var i = left;
+        var j = right;
 
-            while (right > left) {
-                if (right - left > 600) {
-                    var n = right - left + 1;
-                    var m = k - left + 1;
-                    var z = Math.log(n);
-                    var s = 0.5 * Math.exp(2 * z / 3);
-                    var sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
-                    var newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
-                    var newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
-                    quickselectStep(arr, k, newLeft, newRight, compare);
-                }
+        swap(arr, left, k);
+        if (compare(arr[right], t) > 0) swap(arr, left, right);
 
-                var t = arr[k];
-                var i = left;
-                var j = right;
-
-                swap(arr, left, k);
-                if (compare(arr[right], t) > 0) swap(arr, left, right);
-
-                while (i < j) {
-                    swap(arr, i, j);
-                    i++;
-                    j--;
-                    while (compare(arr[i], t) < 0) {
-                        i++;
-                    }while (compare(arr[j], t) > 0) {
-                        j--;
-                    }
-                }
-
-                if (compare(arr[left], t) === 0) swap(arr, left, j);else {
-                    j++;
-                    swap(arr, j, right);
-                }
-
-                if (j <= k) left = j + 1;
-                if (k <= j) right = j - 1;
+        while (i < j) {
+            swap(arr, i, j);
+            i++;
+            j--;
+            while (compare(arr[i], t) < 0) {
+                i++;
+            }while (compare(arr[j], t) > 0) {
+                j--;
             }
         }
 
-        function swap(arr, i, j) {
-            var tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
+        if (compare(arr[left], t) === 0) swap(arr, left, j);else {
+            j++;
+            swap(arr, j, right);
         }
 
-        function defaultCompare(a, b) {
-            return a < b ? -1 : a > b ? 1 : 0;
-        }
-
-        return quickselect;
-    });
-});
-
-var rbush_1 = rbush$1;
-var default_1$1 = rbush$1;
-
-function rbush$1(maxEntries, format) {
-    if (!(this instanceof rbush$1)) return new rbush$1(maxEntries, format);
-
-    // max entries in a node is 9 by default; min node fill is 40% for best performance
-    this._maxEntries = Math.max(4, maxEntries || 9);
-    this._minEntries = Math.max(2, Math.ceil(this._maxEntries * 0.4));
-
-    if (format) {
-        this._initFormat(format);
+        if (j <= k) left = j + 1;
+        if (k <= j) right = j - 1;
     }
-
-    this.clear();
 }
 
-rbush$1.prototype = {
+function swap(arr, i, j) {
+    var tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
 
-    all: function all() {
+function defaultCompare(a, b) {
+    return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function _classCallCheck$1(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var RBush = function () {
+    function RBush() {
+        var maxEntries = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 9;
+
+        _classCallCheck$1(this, RBush);
+
+        // max entries in a node is 9 by default; min node fill is 40% for best performance
+        this._maxEntries = Math.max(4, maxEntries);
+        this._minEntries = Math.max(2, Math.ceil(this._maxEntries * 0.4));
+        this.clear();
+    }
+
+    RBush.prototype.all = function all() {
         return this._all(this.data, []);
-    },
+    };
 
-    search: function search(bbox) {
-
-        var node = this.data,
-            result = [],
-            toBBox = this.toBBox;
+    RBush.prototype.search = function search(bbox) {
+        var node = this.data;
+        var result = [];
 
         if (!intersects(bbox, node)) return result;
 
-        var nodesToSearch = [],
-            i,
-            len,
-            child,
-            childBBox;
+        var toBBox = this.toBBox;
+        var nodesToSearch = [];
 
         while (node) {
-            for (i = 0, len = node.children.length; i < len; i++) {
-
-                child = node.children[i];
-                childBBox = node.leaf ? toBBox(child) : child;
+            for (var i = 0; i < node.children.length; i++) {
+                var child = node.children[i];
+                var childBBox = node.leaf ? toBBox(child) : child;
 
                 if (intersects(bbox, childBBox)) {
                     if (node.leaf) result.push(child);else if (contains(bbox, childBBox)) this._all(child, result);else nodesToSearch.push(child);
@@ -139,26 +108,18 @@ rbush$1.prototype = {
         }
 
         return result;
-    },
+    };
 
-    collides: function collides(bbox) {
-
-        var node = this.data,
-            toBBox = this.toBBox;
+    RBush.prototype.collides = function collides(bbox) {
+        var node = this.data;
 
         if (!intersects(bbox, node)) return false;
 
-        var nodesToSearch = [],
-            i,
-            len,
-            child,
-            childBBox;
-
+        var nodesToSearch = [];
         while (node) {
-            for (i = 0, len = node.children.length; i < len; i++) {
-
-                child = node.children[i];
-                childBBox = node.leaf ? toBBox(child) : child;
+            for (var i = 0; i < node.children.length; i++) {
+                var child = node.children[i];
+                var childBBox = node.leaf ? this.toBBox(child) : child;
 
                 if (intersects(bbox, childBBox)) {
                     if (node.leaf || contains(bbox, childBBox)) return true;
@@ -169,13 +130,13 @@ rbush$1.prototype = {
         }
 
         return false;
-    },
+    };
 
-    load: function load(data) {
+    RBush.prototype.load = function load(data) {
         if (!(data && data.length)) return this;
 
         if (data.length < this._minEntries) {
-            for (var i = 0, len = data.length; i < len; i++) {
+            for (var i = 0; i < data.length; i++) {
                 this.insert(data[i]);
             }
             return this;
@@ -203,29 +164,28 @@ rbush$1.prototype = {
         }
 
         return this;
-    },
+    };
 
-    insert: function insert(item) {
+    RBush.prototype.insert = function insert(item) {
         if (item) this._insert(item, this.data.height - 1);
         return this;
-    },
+    };
 
-    clear: function clear() {
+    RBush.prototype.clear = function clear() {
         this.data = createNode([]);
         return this;
-    },
+    };
 
-    remove: function remove(item, equalsFn) {
+    RBush.prototype.remove = function remove(item, equalsFn) {
         if (!item) return this;
 
-        var node = this.data,
-            bbox = this.toBBox(item),
-            path = [],
-            indexes = [],
-            i,
-            parent,
-            index,
-            goingUp;
+        var node = this.data;
+        var bbox = this.toBBox(item);
+        var path = [];
+        var indexes = [];
+        var i = void 0,
+            parent = void 0,
+            goingUp = void 0;
 
         // depth-first iterative tree traversal
         while (node || path.length) {
@@ -240,7 +200,7 @@ rbush$1.prototype = {
 
             if (node.leaf) {
                 // check current node
-                index = findItem(item, node.children, equalsFn);
+                var index = findItem(item, node.children, equalsFn);
 
                 if (index !== -1) {
                     // item found, remove the item and condense tree upwards
@@ -267,25 +227,30 @@ rbush$1.prototype = {
         }
 
         return this;
-    },
+    };
 
-    toBBox: function toBBox(item) {
+    RBush.prototype.toBBox = function toBBox(item) {
         return item;
-    },
+    };
 
-    compareMinX: compareNodeMinX,
-    compareMinY: compareNodeMinY,
+    RBush.prototype.compareMinX = function compareMinX(a, b) {
+        return a.minX - b.minX;
+    };
 
-    toJSON: function toJSON() {
+    RBush.prototype.compareMinY = function compareMinY(a, b) {
+        return a.minY - b.minY;
+    };
+
+    RBush.prototype.toJSON = function toJSON() {
         return this.data;
-    },
+    };
 
-    fromJSON: function fromJSON(data) {
+    RBush.prototype.fromJSON = function fromJSON(data) {
         this.data = data;
         return this;
-    },
+    };
 
-    _all: function _all(node, result) {
+    RBush.prototype._all = function _all(node, result) {
         var nodesToSearch = [];
         while (node) {
             if (node.leaf) result.push.apply(result, node.children);else nodesToSearch.push.apply(nodesToSearch, node.children);
@@ -293,13 +258,13 @@ rbush$1.prototype = {
             node = nodesToSearch.pop();
         }
         return result;
-    },
+    };
 
-    _build: function _build(items, left, right, height) {
+    RBush.prototype._build = function _build(items, left, right, height) {
 
-        var N = right - left + 1,
-            M = this._maxEntries,
-            node;
+        var N = right - left + 1;
+        var M = this._maxEntries;
+        var node = void 0;
 
         if (N <= M) {
             // reached leaf level; return leaf
@@ -322,24 +287,20 @@ rbush$1.prototype = {
 
         // split the items into M mostly square tiles
 
-        var N2 = Math.ceil(N / M),
-            N1 = N2 * Math.ceil(Math.sqrt(M)),
-            i,
-            j,
-            right2,
-            right3;
+        var N2 = Math.ceil(N / M);
+        var N1 = N2 * Math.ceil(Math.sqrt(M));
 
         multiSelect(items, left, right, N1, this.compareMinX);
 
-        for (i = left; i <= right; i += N1) {
+        for (var i = left; i <= right; i += N1) {
 
-            right2 = Math.min(i + N1 - 1, right);
+            var right2 = Math.min(i + N1 - 1, right);
 
             multiSelect(items, i, right2, N2, this.compareMinY);
 
-            for (j = i; j <= right2; j += N2) {
+            for (var j = i; j <= right2; j += N2) {
 
-                right3 = Math.min(j + N2 - 1, right2);
+                var right3 = Math.min(j + N2 - 1, right2);
 
                 // pack each entry recursively
                 node.children.push(this._build(items, j, right3, height - 1));
@@ -349,23 +310,22 @@ rbush$1.prototype = {
         calcBBox(node, this.toBBox);
 
         return node;
-    },
+    };
 
-    _chooseSubtree: function _chooseSubtree(bbox, node, level, path) {
-
-        var i, len, child, targetNode, area, enlargement, minArea, minEnlargement;
-
+    RBush.prototype._chooseSubtree = function _chooseSubtree(bbox, node, level, path) {
         while (true) {
             path.push(node);
 
             if (node.leaf || path.length - 1 === level) break;
 
-            minArea = minEnlargement = Infinity;
+            var minArea = Infinity;
+            var minEnlargement = Infinity;
+            var targetNode = void 0;
 
-            for (i = 0, len = node.children.length; i < len; i++) {
-                child = node.children[i];
-                area = bboxArea(child);
-                enlargement = enlargedArea(bbox, child) - area;
+            for (var i = 0; i < node.children.length; i++) {
+                var child = node.children[i];
+                var area = bboxArea(child);
+                var enlargement = enlargedArea(bbox, child) - area;
 
                 // choose entry with the least area enlargement
                 if (enlargement < minEnlargement) {
@@ -385,13 +345,11 @@ rbush$1.prototype = {
         }
 
         return node;
-    },
+    };
 
-    _insert: function _insert(item, level, isNode) {
-
-        var toBBox = this.toBBox,
-            bbox = isNode ? item : toBBox(item),
-            insertPath = [];
+    RBush.prototype._insert = function _insert(item, level, isNode) {
+        var bbox = isNode ? item : this.toBBox(item);
+        var insertPath = [];
 
         // find the best node for accommodating the item, saving all nodes along the path too
         var node = this._chooseSubtree(bbox, this.data, level, insertPath);
@@ -410,14 +368,15 @@ rbush$1.prototype = {
 
         // adjust bboxes along the insertion path
         this._adjustParentBBoxes(bbox, insertPath, level);
-    },
+    };
 
     // split overflowed node into two
-    _split: function _split(insertPath, level) {
 
-        var node = insertPath[level],
-            M = node.children.length,
-            m = this._minEntries;
+
+    RBush.prototype._split = function _split(insertPath, level) {
+        var node = insertPath[level];
+        var M = node.children.length;
+        var m = this._minEntries;
 
         this._chooseSplitAxis(node, m, M);
 
@@ -431,28 +390,27 @@ rbush$1.prototype = {
         calcBBox(newNode, this.toBBox);
 
         if (level) insertPath[level - 1].children.push(newNode);else this._splitRoot(node, newNode);
-    },
+    };
 
-    _splitRoot: function _splitRoot(node, newNode) {
+    RBush.prototype._splitRoot = function _splitRoot(node, newNode) {
         // split root node
         this.data = createNode([node, newNode]);
         this.data.height = node.height + 1;
         this.data.leaf = false;
         calcBBox(this.data, this.toBBox);
-    },
+    };
 
-    _chooseSplitIndex: function _chooseSplitIndex(node, m, M) {
+    RBush.prototype._chooseSplitIndex = function _chooseSplitIndex(node, m, M) {
+        var index = void 0;
+        var minOverlap = Infinity;
+        var minArea = Infinity;
 
-        var i, bbox1, bbox2, overlap, area, minOverlap, minArea, index;
+        for (var i = m; i <= M - m; i++) {
+            var bbox1 = distBBox(node, 0, i, this.toBBox);
+            var bbox2 = distBBox(node, i, M, this.toBBox);
 
-        minOverlap = minArea = Infinity;
-
-        for (i = m; i <= M - m; i++) {
-            bbox1 = distBBox(node, 0, i, this.toBBox);
-            bbox2 = distBBox(node, i, M, this.toBBox);
-
-            overlap = intersectionArea(bbox1, bbox2);
-            area = bboxArea(bbox1) + bboxArea(bbox2);
+            var overlap = intersectionArea(bbox1, bbox2);
+            var area = bboxArea(bbox1) + bboxArea(bbox2);
 
             // choose distribution with minimum overlap
             if (overlap < minOverlap) {
@@ -469,57 +427,57 @@ rbush$1.prototype = {
             }
         }
 
-        return index;
-    },
+        return index || M - m;
+    };
 
     // sorts node children by the best axis for split
-    _chooseSplitAxis: function _chooseSplitAxis(node, m, M) {
 
-        var compareMinX = node.leaf ? this.compareMinX : compareNodeMinX,
-            compareMinY = node.leaf ? this.compareMinY : compareNodeMinY,
-            xMargin = this._allDistMargin(node, m, M, compareMinX),
-            yMargin = this._allDistMargin(node, m, M, compareMinY);
+
+    RBush.prototype._chooseSplitAxis = function _chooseSplitAxis(node, m, M) {
+        var compareMinX = node.leaf ? this.compareMinX : compareNodeMinX;
+        var compareMinY = node.leaf ? this.compareMinY : compareNodeMinY;
+        var xMargin = this._allDistMargin(node, m, M, compareMinX);
+        var yMargin = this._allDistMargin(node, m, M, compareMinY);
 
         // if total distributions margin value is minimal for x, sort by minX,
         // otherwise it's already sorted by minY
         if (xMargin < yMargin) node.children.sort(compareMinX);
-    },
+    };
 
     // total margin of all possible split distributions where each node is at least m full
-    _allDistMargin: function _allDistMargin(node, m, M, compare) {
 
+
+    RBush.prototype._allDistMargin = function _allDistMargin(node, m, M, compare) {
         node.children.sort(compare);
 
-        var toBBox = this.toBBox,
-            leftBBox = distBBox(node, 0, m, toBBox),
-            rightBBox = distBBox(node, M - m, M, toBBox),
-            margin = bboxMargin(leftBBox) + bboxMargin(rightBBox),
-            i,
-            child;
+        var toBBox = this.toBBox;
+        var leftBBox = distBBox(node, 0, m, toBBox);
+        var rightBBox = distBBox(node, M - m, M, toBBox);
+        var margin = bboxMargin(leftBBox) + bboxMargin(rightBBox);
 
-        for (i = m; i < M - m; i++) {
-            child = node.children[i];
+        for (var i = m; i < M - m; i++) {
+            var child = node.children[i];
             extend(leftBBox, node.leaf ? toBBox(child) : child);
             margin += bboxMargin(leftBBox);
         }
 
-        for (i = M - m - 1; i >= m; i--) {
-            child = node.children[i];
-            extend(rightBBox, node.leaf ? toBBox(child) : child);
+        for (var _i = M - m - 1; _i >= m; _i--) {
+            var _child = node.children[_i];
+            extend(rightBBox, node.leaf ? toBBox(_child) : _child);
             margin += bboxMargin(rightBBox);
         }
 
         return margin;
-    },
+    };
 
-    _adjustParentBBoxes: function _adjustParentBBoxes(bbox, path, level) {
+    RBush.prototype._adjustParentBBoxes = function _adjustParentBBoxes(bbox, path, level) {
         // adjust bboxes along the given tree path
         for (var i = level; i >= 0; i--) {
             extend(path[i], bbox);
         }
-    },
+    };
 
-    _condense: function _condense(path) {
+    RBush.prototype._condense = function _condense(path) {
         // go through the path, removing empty nodes and updating bboxes
         for (var i = path.length - 1, siblings; i >= 0; i--) {
             if (path[i].children.length === 0) {
@@ -529,23 +487,10 @@ rbush$1.prototype = {
                 } else this.clear();
             } else calcBBox(path[i], this.toBBox);
         }
-    },
+    };
 
-    _initFormat: function _initFormat(format) {
-        // data format (minX, minY, maxX, maxY accessors)
-
-        // uses eval-type function compilation instead of just accepting a toBBox function
-        // because the algorithms are very sensitive to sorting functions performance,
-        // so they should be dead simple and without inner calls
-
-        var compareArr = ['return a', ' - b', ';'];
-
-        this.compareMinX = new Function('a', 'b', compareArr.join(format[0]));
-        this.compareMinY = new Function('a', 'b', compareArr.join(format[1]));
-
-        this.toBBox = new Function('a', 'return {minX: a' + format[0] + ', minY: a' + format[1] + ', maxX: a' + format[2] + ', maxY: a' + format[3] + '};');
-    }
-};
+    return RBush;
+}();
 
 function findItem(item, items, equalsFn) {
     if (!equalsFn) return items.indexOf(item);
@@ -569,8 +514,8 @@ function distBBox(node, k, p, toBBox, destNode) {
     destNode.maxX = -Infinity;
     destNode.maxY = -Infinity;
 
-    for (var i = k, child; i < p; i++) {
-        child = node.children[i];
+    for (var i = k; i < p; i++) {
+        var child = node.children[i];
         extend(destNode, node.leaf ? toBBox(child) : child);
     }
 
@@ -604,10 +549,10 @@ function enlargedArea(a, b) {
 }
 
 function intersectionArea(a, b) {
-    var minX = Math.max(a.minX, b.minX),
-        minY = Math.max(a.minY, b.minY),
-        maxX = Math.min(a.maxX, b.maxX),
-        maxY = Math.min(a.maxY, b.maxY);
+    var minX = Math.max(a.minX, b.minX);
+    var minY = Math.max(a.minY, b.minY);
+    var maxX = Math.min(a.maxX, b.maxX);
+    var maxY = Math.min(a.maxY, b.maxY);
 
     return Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
 }
@@ -636,8 +581,7 @@ function createNode(children) {
 // combines selection algorithm with binary divide & conquer approach
 
 function multiSelect(arr, left, right, n, compare) {
-    var stack = [left, right],
-        mid;
+    var stack = [left, right];
 
     while (stack.length) {
         right = stack.pop();
@@ -645,14 +589,16 @@ function multiSelect(arr, left, right, n, compare) {
 
         if (right - left <= n) continue;
 
-        mid = left + Math.ceil((right - left) / n / 2) * n;
+        var mid = left + Math.ceil((right - left) / n / 2) * n;
         quickselect(arr, mid, left, right, compare);
 
         stack.push(left, mid, mid, right);
     }
 }
 
-rbush_1.default = default_1$1;
+var rbush$1 = Object.freeze({
+	default: RBush
+});
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -687,7 +633,7 @@ var factors = {
     millimetres: earthRadius * 1000,
     nauticalmiles: earthRadius / 1852,
     radians: 1,
-    yards: earthRadius / 1.0936
+    yards: earthRadius * 1.0936
 };
 /**
  * Units of measurement factors based on 1 meter.
@@ -710,7 +656,7 @@ var unitsFactors = {
     millimetres: 1000,
     nauticalmiles: 1 / 1852,
     radians: 1 / earthRadius,
-    yards: 1 / 1.0936
+    yards: 1.0936133
 };
 /**
  * Area of measurement factors based on 1 square meter.
@@ -2533,23 +2479,23 @@ function findPoint(geojson, options) {
 
 
 var es$1 = Object.freeze({
+	coordAll: coordAll,
 	coordEach: coordEach$1,
 	coordReduce: coordReduce,
-	propEach: propEach,
-	propReduce: propReduce,
 	featureEach: featureEach$1,
 	featureReduce: featureReduce,
-	coordAll: coordAll,
-	geomEach: geomEach,
-	geomReduce: geomReduce,
+	findPoint: findPoint,
+	findSegment: findSegment,
 	flattenEach: flattenEach,
 	flattenReduce: flattenReduce,
-	segmentEach: segmentEach,
-	segmentReduce: segmentReduce,
+	geomEach: geomEach,
+	geomReduce: geomReduce,
 	lineEach: lineEach,
 	lineReduce: lineReduce,
-	findSegment: findSegment,
-	findPoint: findPoint
+	propEach: propEach,
+	propReduce: propReduce,
+	segmentEach: segmentEach,
+	segmentReduce: segmentReduce
 });
 
 /**
@@ -2591,6 +2537,8 @@ var es$2 = Object.freeze({
 	default: bbox
 });
 
+var rbush$2 = ( rbush$1 && RBush ) || rbush$1;
+
 var require$$0 = ( es$2 && bbox ) || es$2;
 
 var turfBBox = require$$0.default;
@@ -2609,7 +2557,7 @@ var featureCollection = es.featureCollection;
  * var tree = geojsonRbush();
  */
 function geojsonRbush(maxEntries) {
-    var tree = rbush_1(maxEntries);
+    var tree = new rbush$2(maxEntries);
     /**
      * [insert](https://github.com/mourner/rbush#data-format)
      *
@@ -2622,7 +2570,7 @@ function geojsonRbush(maxEntries) {
     tree.insert = function (feature) {
         if (feature.type !== 'Feature') throw new Error('invalid feature');
         feature.bbox = feature.bbox ? feature.bbox : turfBBox(feature);
-        return rbush_1.prototype.insert.call(this, feature);
+        return rbush$2.prototype.insert.call(this, feature);
     };
 
     /**
@@ -2654,7 +2602,7 @@ function geojsonRbush(maxEntries) {
                 load.push(feature);
             });
         }
-        return rbush_1.prototype.load.call(this, load);
+        return rbush$2.prototype.load.call(this, load);
     };
 
     /**
@@ -2671,7 +2619,7 @@ function geojsonRbush(maxEntries) {
     tree.remove = function (feature, equals) {
         if (feature.type !== 'Feature') throw new Error('invalid feature');
         feature.bbox = feature.bbox ? feature.bbox : turfBBox(feature);
-        return rbush_1.prototype.remove.call(this, feature, equals);
+        return rbush$2.prototype.remove.call(this, feature, equals);
     };
 
     /**
@@ -2682,7 +2630,7 @@ function geojsonRbush(maxEntries) {
      * tree.clear()
      */
     tree.clear = function () {
-        return rbush_1.prototype.clear.call(this);
+        return rbush$2.prototype.clear.call(this);
     };
 
     /**
@@ -2696,7 +2644,7 @@ function geojsonRbush(maxEntries) {
      * tree.search(poly);
      */
     tree.search = function (geojson) {
-        var features = rbush_1.prototype.search.call(this, this.toBBox(geojson));
+        var features = rbush$2.prototype.search.call(this, this.toBBox(geojson));
         return featureCollection(features);
     };
 
@@ -2711,7 +2659,7 @@ function geojsonRbush(maxEntries) {
      * tree.collides(poly);
      */
     tree.collides = function (geojson) {
-        return rbush_1.prototype.collides.call(this, this.toBBox(geojson));
+        return rbush$2.prototype.collides.call(this, this.toBBox(geojson));
     };
 
     /**
@@ -2722,7 +2670,7 @@ function geojsonRbush(maxEntries) {
      * tree.all()
      */
     tree.all = function () {
-        var features = rbush_1.prototype.all.call(this);
+        var features = rbush$2.prototype.all.call(this);
         return featureCollection(features);
     };
 
@@ -2734,7 +2682,7 @@ function geojsonRbush(maxEntries) {
      * var exported = tree.toJSON()
      */
     tree.toJSON = function () {
-        return rbush_1.prototype.toJSON.call(this);
+        return rbush$2.prototype.toJSON.call(this);
     };
 
     /**
@@ -2765,7 +2713,7 @@ function geojsonRbush(maxEntries) {
      * tree.fromJSON(exported)
      */
     tree.fromJSON = function (json) {
-        return rbush_1.prototype.fromJSON.call(this, json);
+        return rbush$2.prototype.fromJSON.call(this, json);
     };
 
     /**
@@ -2793,6 +2741,16 @@ var geojsonRbush_1 = geojsonRbush;
 var default_1 = geojsonRbush;
 
 geojsonRbush_1.default = default_1;
+
+var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+
+
+
+
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
 
 var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -9566,7 +9524,7 @@ var Autoadsorb = function (_maptalks$Class) {
         }).addTo(this._mousemoveLayer);
 
         this._updateAdsorbPoint(coordinate);
-        if (this._needCtrl !== domEvent.ctrlKey || this._hasAddVertux) this.adsorbPoint = null;
+        if (this._needCtrl !== domEvent.ctrlKey) this.adsorbPoint = null;
     };
 
     Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
@@ -9864,9 +9822,10 @@ var Autoadsorb = function (_maptalks$Class) {
                     var coords = geo.getCoordinates();
                     var coords0 = coords[0];
 
+                    var doUpdateShadow = true;
                     if (coords0 instanceof Array) {
                         var coordsNew = lodash_differencewith(coords0, coordsOld0, lodash_isequal);
-                        if (coordsNew.length === 0) this._hasAddVertux = true;else {
+                        if (coordsNew.length === 0) doUpdateShadow = false;else {
                             var coordsIndex = lodash_findindex(coords0, coordsNew[0]);
                             var length = coords0.length;
 
@@ -9884,17 +9843,14 @@ var Autoadsorb = function (_maptalks$Class) {
                         coords[_coordsIndex].y = y;
                     }
                     this._needDeal = false;
-                    if (!this._hasAddVertux) {
-                        geo.setCoordinates(coords);
-                        this._upGeoCoords({ target: geo });
-                    }
+                    if (doUpdateShadow) geo._editor._shadow.setCoordinates(coords);
                 }
             } else {
                 if (this.geometry instanceof maptalks.Circle) {
                     this._needDeal = false;
                     var center = this.geometryCoords;
                     var radius = this._map.getProjection().measureLength([center, this.adsorbPoint]);
-                    geo.setRadius(radius);
+                    geo._editor._shadow.setRadius(radius);
                 }
             }
         }
@@ -9904,7 +9860,6 @@ var Autoadsorb = function (_maptalks$Class) {
         var target = _ref.target;
 
         this.geometryCoords = target.getCoordinates();
-        this._hasAddVertux = false;
     };
 
     return Autoadsorb;
@@ -9916,6 +9871,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.2.0, requires maptalks@>=0.47.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.3.0, requires maptalks@>=0.47.0.');
 
 })));
