@@ -15,7 +15,7 @@ const options = {
 export class Autoadsorb extends maptalks.Class {
     constructor(options) {
         super(options)
-        this.tree = rbush()
+        this._tree = rbush()
         this._layerName = `${maptalks.INTERNAL_LAYER_PREFIX}_Autoadsorb`
         this._isEnable = false
         this._updateModeType()
@@ -54,24 +54,7 @@ export class Autoadsorb extends maptalks.Class {
                 map._map_tool.disable()
             this._addTo(map)
             this.adsorblayer = layer
-            this.bindGeometry(geometry)
-        }
-        return this
-    }
-
-    bindGeometry(geometry) {
-        if (geometry instanceof maptalks.Geometry) {
-            if (this.geometry) return this.setGeometry(geometry)
-            this.geometry = geometry
-            this.geometryCoords = geometry.getCoordinates()
-            geometry.on('editstart', this.enable, this)
-            geometry.on('editend', this.disable, this)
-            geometry.on('remove', this.remove, this)
-            if (geometry.isEditing()) {
-                geometry.endEdit()
-                this.enable()
-                geometry.startEdit()
-            } else geometry.startEdit().endEdit()
+            this._bindGeometry(geometry)
         }
         return this
     }
@@ -112,12 +95,11 @@ export class Autoadsorb extends maptalks.Class {
         this.disable()
         const layer = map.getLayer(this._layerName)
         if (layer) layer.remove()
+        delete this.adsorblayer
+        delete this.drawTool
         delete this.geometry
         delete this.geometryCoords
-        delete this._geosSetPoint
-        delete this._geosSetLine
-        delete this._mousemoveLayer
-        delete this._assistLayers
+        delete this.assistLayers
     }
 
     setMode(mode) {
@@ -157,8 +139,8 @@ export class Autoadsorb extends maptalks.Class {
                     target = [...target, name]
                 return target
             }, [])
-            if (arr.length > 0) this._assistLayers = arr
-        } else this._assistLayers = undefined
+            if (arr.length > 0) this.assistLayers = arr
+        } else this.assistLayers = undefined
         this._updateGeosSet()
         return this
     }
@@ -210,8 +192,8 @@ export class Autoadsorb extends maptalks.Class {
 
     _getGeosSet() {
         let geos = this.adsorblayer.getGeometries()
-        if (this._assistLayers)
-            this._assistLayers.forEach((name) =>
+        if (this.assistLayers)
+            this.assistLayers.forEach((name) =>
                 geos.push(...map.getLayer(name).getGeometries())
             )
         return geos
@@ -305,6 +287,22 @@ export class Autoadsorb extends maptalks.Class {
         this._geosSetLine = []
     }
 
+    _bindGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            this.geometry = geometry
+            this.geometryCoords = geometry.getCoordinates()
+            geometry.on('editstart', this.enable, this)
+            geometry.on('editend', this.disable, this)
+            geometry.on('remove', this.remove, this)
+            if (geometry.isEditing()) {
+                geometry.endEdit()
+                this.enable()
+                geometry.startEdit()
+            } else geometry.startEdit().endEdit()
+        }
+        return this
+    }
+
     _registerMapEvents() {
         if (!this._mousemove) {
             const map = this._map
@@ -343,20 +341,20 @@ export class Autoadsorb extends maptalks.Class {
             }).addTo(this._mousemoveLayer)
 
         this._updateAdsorbPoint(coordinate)
-        if (this._needCtrl !== domEvent.ctrlKey) this.adsorbPoint = null
+        if (this._needCtrl !== domEvent.ctrlKey) this._adsorbPoint = null
     }
 
     _updateAdsorbPoint(coordinate) {
         if (this._needFindGeometry) {
             const availGeos = this._findGeometry(coordinate)
 
-            this.adsorbPoint =
+            this._adsorbPoint =
                 availGeos && availGeos.features.length > 0
                     ? this._getAdsorbPoint(availGeos)
                     : null
 
-            if (this.adsorbPoint) {
-                const { x, y } = this.adsorbPoint
+            if (this._adsorbPoint) {
+                const { x, y } = this._adsorbPoint
                 this._marker.setCoordinates([x, y])
             }
         }
@@ -377,10 +375,10 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _findAvailGeos(features, coordinate) {
-        this.tree.clear()
-        this.tree.load({ type: 'FeatureCollection', features })
+        this._tree.clear()
+        this._tree.load({ type: 'FeatureCollection', features })
         const inspectExtent = this._createInspectExtent(coordinate)
-        const availGeos = this.tree.search(inspectExtent)
+        const availGeos = this._tree.search(inspectExtent)
         return availGeos.features
     }
 
@@ -539,11 +537,11 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _resetCoordinates(e) {
-        if (this.adsorbPoint) {
+        if (this._adsorbPoint) {
             const { options, _geometry } = e.target
             const { mode } = options
             const geo = _geometry
-            const { x, y } = this.adsorbPoint
+            const { x, y } = this._adsorbPoint
             if (geo instanceof maptalks.Geometry) {
                 const coords = geo.getCoordinates()
                 if (coords instanceof Array) {
@@ -566,7 +564,7 @@ export class Autoadsorb extends maptalks.Class {
                     if (mode === 'Circle') {
                         const radius = this._map
                             .getProjection()
-                            .measureLength([coords, this.adsorbPoint])
+                            .measureLength([coords, this._adsorbPoint])
                         geo.setRadius(radius)._updateCache()
                     }
                 }
@@ -575,13 +573,13 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _resetClickPoint(e) {
-        if (this.adsorbPoint) {
+        if (this._adsorbPoint) {
             const clickCoords = e.target._clickCoords
             if (
                 clickCoords instanceof maptalks.Coordinate ||
                 clickCoords instanceof Array
             ) {
-                const point = this._map.coordToPoint(this.adsorbPoint)
+                const point = this._map.coordToPoint(this._adsorbPoint)
                 const { x, y } = this._map._pointToPrj(point)
                 const { length } = clickCoords
                 if (length) {
@@ -597,15 +595,15 @@ export class Autoadsorb extends maptalks.Class {
 
     _setEditCoordinates(e) {
         if (
-            this.adsorbPoint &&
+            this._adsorbPoint &&
             this._needDeal &&
             this.geometry.type !== 'MultiPolygon'
         ) {
             const geo = e.target
-            const { x, y } = this.adsorbPoint
+            const { x, y } = this._adsorbPoint
             if (this.geometryCoords instanceof Array) {
                 const coordsOld0 = this.geometryCoords[0]
-                if (!includes(coordsOld0, this.adsorbPoint)) {
+                if (!includes(coordsOld0, this._adsorbPoint)) {
                     const coords = geo.getCoordinates()
                     const coords0 = coords[0]
 
@@ -647,7 +645,7 @@ export class Autoadsorb extends maptalks.Class {
                     const center = this.geometryCoords
                     const radius = this._map
                         .getProjection()
-                        .measureLength([center, this.adsorbPoint])
+                        .measureLength([center, this._adsorbPoint])
                     geo._editor._shadow.setRadius(radius)
                 }
             }

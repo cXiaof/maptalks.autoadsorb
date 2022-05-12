@@ -4,7 +4,7 @@
  * (c) 2016-2022 maptalks.org
  */
 /*!
- * requires maptalks@>=0.47.0 
+ * requires maptalks@>=0.46.0 
  */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
@@ -9196,7 +9196,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
         var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
-        _this.tree = geojsonRbush_1();
+        _this._tree = geojsonRbush_1();
         _this._layerName = maptalks.INTERNAL_LAYER_PREFIX + '_Autoadsorb';
         _this._isEnable = false;
         _this._updateModeType();
@@ -9235,24 +9235,7 @@ var Autoadsorb = function (_maptalks$Class) {
             if (_map2._map_tool && _map2._map_tool instanceof maptalks.DrawTool) _map2._map_tool.disable();
             this._addTo(_map2);
             this.adsorblayer = layer;
-            this.bindGeometry(geometry);
-        }
-        return this;
-    };
-
-    Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
-        if (geometry instanceof maptalks.Geometry) {
-            if (this.geometry) return this.setGeometry(geometry);
-            this.geometry = geometry;
-            this.geometryCoords = geometry.getCoordinates();
-            geometry.on('editstart', this.enable, this);
-            geometry.on('editend', this.disable, this);
-            geometry.on('remove', this.remove, this);
-            if (geometry.isEditing()) {
-                geometry.endEdit();
-                this.enable();
-                geometry.startEdit();
-            } else geometry.startEdit().endEdit();
+            this._bindGeometry(geometry);
         }
         return this;
     };
@@ -9293,12 +9276,11 @@ var Autoadsorb = function (_maptalks$Class) {
         this.disable();
         var layer = map.getLayer(this._layerName);
         if (layer) layer.remove();
+        delete this.adsorblayer;
+        delete this.drawTool;
         delete this.geometry;
         delete this.geometryCoords;
-        delete this._geosSetPoint;
-        delete this._geosSetLine;
-        delete this._mousemoveLayer;
-        delete this._assistLayers;
+        delete this.assistLayers;
     };
 
     Autoadsorb.prototype.setMode = function setMode(mode) {
@@ -9337,8 +9319,8 @@ var Autoadsorb = function (_maptalks$Class) {
                 if (layer instanceof maptalks.VectorLayer) target = [].concat(target, [name]);
                 return target;
             }, []);
-            if (arr.length > 0) this._assistLayers = arr;
-        } else this._assistLayers = undefined;
+            if (arr.length > 0) this.assistLayers = arr;
+        } else this.assistLayers = undefined;
         this._updateGeosSet();
         return this;
     };
@@ -9387,7 +9369,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._getGeosSet = function _getGeosSet() {
         var geos = this.adsorblayer.getGeometries();
-        if (this._assistLayers) this._assistLayers.forEach(function (name) {
+        if (this.assistLayers) this.assistLayers.forEach(function (name) {
             return geos.push.apply(geos, map.getLayer(name).getGeometries());
         });
         return geos;
@@ -9483,6 +9465,22 @@ var Autoadsorb = function (_maptalks$Class) {
         this._geosSetLine = [];
     };
 
+    Autoadsorb.prototype._bindGeometry = function _bindGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            this.geometry = geometry;
+            this.geometryCoords = geometry.getCoordinates();
+            geometry.on('editstart', this.enable, this);
+            geometry.on('editend', this.disable, this);
+            geometry.on('remove', this.remove, this);
+            if (geometry.isEditing()) {
+                geometry.endEdit();
+                this.enable();
+                geometry.startEdit();
+            } else geometry.startEdit().endEdit();
+        }
+        return this;
+    };
+
     Autoadsorb.prototype._registerMapEvents = function _registerMapEvents() {
         var _this5 = this;
 
@@ -9524,17 +9522,17 @@ var Autoadsorb = function (_maptalks$Class) {
         }).addTo(this._mousemoveLayer);
 
         this._updateAdsorbPoint(coordinate);
-        if (this._needCtrl !== domEvent.ctrlKey) this.adsorbPoint = null;
+        if (this._needCtrl !== domEvent.ctrlKey) this._adsorbPoint = null;
     };
 
     Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
         if (this._needFindGeometry) {
             var availGeos = this._findGeometry(coordinate);
 
-            this.adsorbPoint = availGeos && availGeos.features.length > 0 ? this._getAdsorbPoint(availGeos) : null;
+            this._adsorbPoint = availGeos && availGeos.features.length > 0 ? this._getAdsorbPoint(availGeos) : null;
 
-            if (this.adsorbPoint) {
-                var _adsorbPoint = this.adsorbPoint,
+            if (this._adsorbPoint) {
+                var _adsorbPoint = this._adsorbPoint,
                     x = _adsorbPoint.x,
                     y = _adsorbPoint.y;
 
@@ -9558,10 +9556,10 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._findAvailGeos = function _findAvailGeos(features, coordinate) {
-        this.tree.clear();
-        this.tree.load({ type: 'FeatureCollection', features: features });
+        this._tree.clear();
+        this._tree.load({ type: 'FeatureCollection', features: features });
         var inspectExtent = this._createInspectExtent(coordinate);
-        var availGeos = this.tree.search(inspectExtent);
+        var availGeos = this._tree.search(inspectExtent);
         return availGeos.features;
     };
 
@@ -9746,14 +9744,14 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._resetCoordinates = function _resetCoordinates(e) {
-        if (this.adsorbPoint) {
+        if (this._adsorbPoint) {
             var _e$target = e.target,
                 _options2 = _e$target.options,
                 _geometry = _e$target._geometry;
             var mode = _options2.mode;
 
             var geo = _geometry;
-            var _adsorbPoint2 = this.adsorbPoint,
+            var _adsorbPoint2 = this._adsorbPoint,
                 x = _adsorbPoint2.x,
                 y = _adsorbPoint2.y;
 
@@ -9778,7 +9776,7 @@ var Autoadsorb = function (_maptalks$Class) {
                     geo.setCoordinates(coords);
                 } else {
                     if (mode === 'Circle') {
-                        var radius = this._map.getProjection().measureLength([coords, this.adsorbPoint]);
+                        var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
                         geo.setRadius(radius)._updateCache();
                     }
                 }
@@ -9787,10 +9785,10 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._resetClickPoint = function _resetClickPoint(e) {
-        if (this.adsorbPoint) {
+        if (this._adsorbPoint) {
             var clickCoords = e.target._clickCoords;
             if (clickCoords instanceof maptalks.Coordinate || clickCoords instanceof Array) {
-                var point = this._map.coordToPoint(this.adsorbPoint);
+                var point = this._map.coordToPoint(this._adsorbPoint);
 
                 var _map$_pointToPrj = this._map._pointToPrj(point),
                     x = _map$_pointToPrj.x,
@@ -9810,15 +9808,15 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._setEditCoordinates = function _setEditCoordinates(e) {
-        if (this.adsorbPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
+        if (this._adsorbPoint && this._needDeal && this.geometry.type !== 'MultiPolygon') {
             var geo = e.target;
-            var _adsorbPoint3 = this.adsorbPoint,
+            var _adsorbPoint3 = this._adsorbPoint,
                 x = _adsorbPoint3.x,
                 y = _adsorbPoint3.y;
 
             if (this.geometryCoords instanceof Array) {
                 var coordsOld0 = this.geometryCoords[0];
-                if (!lodash_includes(coordsOld0, this.adsorbPoint)) {
+                if (!lodash_includes(coordsOld0, this._adsorbPoint)) {
                     var coords = geo.getCoordinates();
                     var coords0 = coords[0];
 
@@ -9849,7 +9847,7 @@ var Autoadsorb = function (_maptalks$Class) {
                 if (this.geometry instanceof maptalks.Circle) {
                     this._needDeal = false;
                     var center = this.geometryCoords;
-                    var radius = this._map.getProjection().measureLength([center, this.adsorbPoint]);
+                    var radius = this._map.getProjection().measureLength([center, this._adsorbPoint]);
                     geo._editor._shadow.setRadius(radius);
                 }
             }
@@ -9871,6 +9869,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.3.0, requires maptalks@>=0.47.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.3.0, requires maptalks@>=0.46.0.');
 
 })));
