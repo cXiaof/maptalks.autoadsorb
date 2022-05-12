@@ -10,6 +10,13 @@ const options = {
     mode: 'auto',
     distance: 10,
     needCtrl: false,
+    cursorSymbol: {
+        markerType: 'ellipse',
+        markerFill: '#de3333',
+        markerWidth: 4,
+        markerHeight: 4,
+        markerLineWidth: 0,
+    },
 }
 
 export class Autoadsorb extends maptalks.Class {
@@ -65,7 +72,6 @@ export class Autoadsorb extends maptalks.Class {
         this._registerMapEvents()
         if (this.drawTool) this._registerDrawToolEvents()
         if (this.geometry) this._registerGeometryEvents()
-        if (this._mousemoveLayer) this._mousemoveLayer.show()
         return this
     }
 
@@ -75,11 +81,10 @@ export class Autoadsorb extends maptalks.Class {
         this._offDrawToolEvents()
         this._offGeometryEvents()
         this._resetGeosSet()
-
-        delete this._mousemove
-        delete this._mousedown
-        delete this._mouseup
-        if (this._mousemoveLayer) this._mousemoveLayer.hide()
+        if (this.cursor) {
+            this.cursor.remove()
+            delete this.cursor
+        }
         return this
     }
 
@@ -93,8 +98,7 @@ export class Autoadsorb extends maptalks.Class {
 
     remove() {
         this.disable()
-        const layer = map.getLayer(this._layerName)
-        if (layer) layer.remove()
+        if (this._mousemoveLayer) this._mousemoveLayer.remove()
         delete this.adsorblayer
         delete this.drawTool
         delete this.geometry
@@ -163,8 +167,7 @@ export class Autoadsorb extends maptalks.Class {
     _addTo(map) {
         if (map.getLayer(this._layerName)) this.remove()
         this._mousemoveLayer = new maptalks.VectorLayer(this._layerName)
-            .addTo(map)
-            .bringToFront()
+        this._mousemoveLayer.addTo(map).bringToFront()
         this._map = map
         this._resetGeosSet()
         return this
@@ -323,10 +326,18 @@ export class Autoadsorb extends maptalks.Class {
 
     _offMapEvents() {
         const map = this._map
-        if (this._mousemove)
+        if (this._mousemove) {
             map.off('mousemove touchstart', this._mousemove, this)
-        if (this._mousedown) map.off('mousedown', this._mousedown, this)
-        if (this._mouseup) map.off('mouseup', this._mouseup, this)
+            delete this._mousemove
+        }
+        if (this._mousedown) {
+            map.off('mousedown', this._mousedown, this)
+            delete this._mousedown
+        }
+        if (this._mouseup) {
+            map.off('mouseup', this._mouseup, this)
+            delete this._mouseup
+        }
     }
 
     _mousemoveEvents(e) {
@@ -334,11 +345,13 @@ export class Autoadsorb extends maptalks.Class {
         this._needDeal = true
         this._mousePoint = coordinate
 
-        if (this._marker) this._marker.setCoordinates(coordinate)
-        else
-            this._marker = new maptalks.Marker(coordinate, {
-                symbol: {},
+        if (this.cursor) {
+            this.cursor.setCoordinates(coordinate)
+        } else {
+            this.cursor = new maptalks.Marker(coordinate, {
+                symbol: this.options['cursorSymbol'] || options.cursorSymbol,
             }).addTo(this._mousemoveLayer)
+        }
 
         this._updateAdsorbPoint(coordinate)
         if (this._needCtrl !== domEvent.ctrlKey) this._adsorbPoint = null
@@ -355,7 +368,7 @@ export class Autoadsorb extends maptalks.Class {
 
             if (this._adsorbPoint) {
                 const { x, y } = this._adsorbPoint
-                this._marker.setCoordinates([x, y])
+                this.cursor.setCoordinates([x, y])
             }
         }
     }

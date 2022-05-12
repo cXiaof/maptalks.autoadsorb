@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.3.0
+ * maptalks.autoadsorb v0.4.0
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
  */
@@ -9181,7 +9181,14 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var options = {
     mode: 'auto',
     distance: 10,
-    needCtrl: false
+    needCtrl: false,
+    cursorSymbol: {
+        markerType: 'ellipse',
+        markerFill: '#de3333',
+        markerWidth: 4,
+        markerHeight: 4,
+        markerLineWidth: 0
+    }
 };
 
 var Autoadsorb = function (_maptalks$Class) {
@@ -9242,7 +9249,6 @@ var Autoadsorb = function (_maptalks$Class) {
         this._registerMapEvents();
         if (this.drawTool) this._registerDrawToolEvents();
         if (this.geometry) this._registerGeometryEvents();
-        if (this._mousemoveLayer) this._mousemoveLayer.show();
         return this;
     };
 
@@ -9252,11 +9258,10 @@ var Autoadsorb = function (_maptalks$Class) {
         this._offDrawToolEvents();
         this._offGeometryEvents();
         this._resetGeosSet();
-
-        delete this._mousemove;
-        delete this._mousedown;
-        delete this._mouseup;
-        if (this._mousemoveLayer) this._mousemoveLayer.hide();
+        if (this.cursor) {
+            this.cursor.remove();
+            delete this.cursor;
+        }
         return this;
     };
 
@@ -9270,8 +9275,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype.remove = function remove() {
         this.disable();
-        var layer = map.getLayer(this._layerName);
-        if (layer) layer.remove();
+        if (this._mousemoveLayer) this._mousemoveLayer.remove();
         delete this.adsorblayer;
         delete this.drawTool;
         delete this.geometry;
@@ -9338,7 +9342,8 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._addTo = function _addTo(map) {
         if (map.getLayer(this._layerName)) this.remove();
-        this._mousemoveLayer = new VectorLayer(this._layerName).addTo(map).bringToFront();
+        this._mousemoveLayer = new VectorLayer(this._layerName);
+        this._mousemoveLayer.addTo(map).bringToFront();
         this._map = map;
         this._resetGeosSet();
         return this;
@@ -9501,9 +9506,18 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._offMapEvents = function _offMapEvents() {
         var map = this._map;
-        if (this._mousemove) map.off('mousemove touchstart', this._mousemove, this);
-        if (this._mousedown) map.off('mousedown', this._mousedown, this);
-        if (this._mouseup) map.off('mouseup', this._mouseup, this);
+        if (this._mousemove) {
+            map.off('mousemove touchstart', this._mousemove, this);
+            delete this._mousemove;
+        }
+        if (this._mousedown) {
+            map.off('mousedown', this._mousedown, this);
+            delete this._mousedown;
+        }
+        if (this._mouseup) {
+            map.off('mouseup', this._mouseup, this);
+            delete this._mouseup;
+        }
     };
 
     Autoadsorb.prototype._mousemoveEvents = function _mousemoveEvents(e) {
@@ -9513,9 +9527,13 @@ var Autoadsorb = function (_maptalks$Class) {
         this._needDeal = true;
         this._mousePoint = coordinate;
 
-        if (this._marker) this._marker.setCoordinates(coordinate);else this._marker = new Marker(coordinate, {
-            symbol: {}
-        }).addTo(this._mousemoveLayer);
+        if (this.cursor) {
+            this.cursor.setCoordinates(coordinate);
+        } else {
+            this.cursor = new Marker(coordinate, {
+                symbol: this.options['cursorSymbol'] || options.cursorSymbol
+            }).addTo(this._mousemoveLayer);
+        }
 
         this._updateAdsorbPoint(coordinate);
         if (this._needCtrl !== domEvent.ctrlKey) this._adsorbPoint = null;
@@ -9532,7 +9550,7 @@ var Autoadsorb = function (_maptalks$Class) {
                     x = _adsorbPoint.x,
                     y = _adsorbPoint.y;
 
-                this._marker.setCoordinates([x, y]);
+                this.cursor.setCoordinates([x, y]);
             }
         }
     };
@@ -9863,4 +9881,4 @@ Autoadsorb.mergeOptions(options);
 
 export { Autoadsorb };
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.3.0, requires maptalks@>=0.46.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.4.0, requires maptalks@>=0.46.0.');

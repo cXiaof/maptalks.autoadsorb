@@ -57,6 +57,7 @@ new maptalks.Autoadsorb(options)
     -   mode **String** there are three modes, auto/vertux/border, auto by default.
     -   distance **Number** the distance in pixel from mouse to the snap point, 10 by default.
     -   needCtrl **Boolean** do adsorb only with Ctrl, default is false.
+    -   cursorSymbol **Object** adsorb cursor symbol(MarkerSymbol).
 
 `setLayer(layer)` specify a vectorlayer which drawing on.
 
