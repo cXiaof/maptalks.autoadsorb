@@ -41,60 +41,61 @@ new maptalks.CompassControl({
 
 const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 
-const autoAdsorb = new maptalks.Autoadsorb()
-console.log(autoAdsorb)
-
 // new DrawTool
-// const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
+const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
 
-// const autoAdsorb = new maptalks.Autoadsorb().setLayer(layerSketch)
+const autoAdsorb = new maptalks.Autoadsorb().bindDrawTool(drawTool)
 
-// drawTool.on('drawend', (param) => {
-//     const { geometry } = param
-//     geometry.addTo(layerSketch)
-//     geometry.on('contextmenu', () => {
-//         const isEditing = geometry.isEditing()
-//         if (isEditing) {
-//             geometry.endEdit()
-//             autoAdsorb.setLayer(layerSketch)
-//         }
-//         if (!isEditing) {
-//             geometry.startEdit()
-//             autoAdsorb.setGeometry(geometry)
-//         }
-//     })
-// })
+drawTool.on('drawend', (param) => {
+    const { geometry } = param
+    geometry.addTo(layerSketch)
+    geometry.on('contextmenu', () => {
+        if (geometry.isEditing()) {
+            geometry.endEdit()
+        } else {
+            geometry.startEdit()
+            autoAdsorb.bindGeometry(geometry)
+        }
+    })
+})
 
-// // new Toolbar
-// const modesDraw = ['LineString', 'Polygon', 'Rectangle', 'Circle']
-// const modesPlug = ['auto', 'vertux', 'border']
-// const toolbar = new maptalks.control.Toolbar({
-//     position: 'top-left',
-//     items: [
-//         {
-//             item: 'Draw',
-//             children: modesDraw.map((item) => ({
-//                 item,
-//                 click: () => drawTool.setMode(item).enable(),
-//             })),
-//         },
-//         {
-//             item: 'Stop Drawing',
-//             click: () => drawTool.disable(),
-//         },
-//         {
-//             item: 'Choose Mode',
-//             children: modesPlug.map((item) => ({
-//                 item,
-//                 click: () => autoAdsorb.setMode(item),
-//             })),
-//         },
-//         {
-//             item: 'Clear',
-//             click: () => layerSketch.clear(),
-//         },
-//     ],
-// }).addTo(map)
+// new Toolbar
+const modesDraw = [
+    'Point',
+    'LineString',
+    'Polygon',
+    'Rectangle',
+    'Circle',
+    'Ellipse',
+]
+const modesPlug = ['auto', 'vertux', 'border']
+const toolbar = new maptalks.control.Toolbar({
+    position: 'top-left',
+    items: [
+        {
+            item: 'Draw',
+            children: modesDraw.map((item) => ({
+                item,
+                click: () => drawTool.setMode(item).enable(),
+            })),
+        },
+        {
+            item: 'Stop Drawing',
+            click: () => drawTool.disable(),
+        },
+        {
+            item: 'Choose Mode',
+            children: modesPlug.map((item) => ({
+                item,
+                click: () => autoAdsorb.setMode(item),
+            })),
+        },
+        {
+            item: 'Clear',
+            click: () => layerSketch.clear(),
+        },
+    ],
+}).addTo(map)
 
 // new tip Panel
 new maptalks.control.Panel({

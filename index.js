@@ -30,6 +30,7 @@ export class Autoadsorb extends maptalks.Class {
 
     setMode(mode) {
         this.options['mode'] = mode
+        this._updateGeosSet()
         return this
     }
 
@@ -39,6 +40,7 @@ export class Autoadsorb extends maptalks.Class {
 
     setDistance(distance) {
         this.options['distance'] = distance
+        this._updateGeosSet()
         return this
     }
 
@@ -56,7 +58,7 @@ export class Autoadsorb extends maptalks.Class {
             this._drawTool = drawTool
             drawTool.on('enable', this._enable, this)
             drawTool.on('disable remove', this._disable, this)
-            if (drawTool.isEnabled()) this.enable()
+            if (drawTool.isEnabled()) this._enable()
         }
         return this
     }
@@ -69,19 +71,21 @@ export class Autoadsorb extends maptalks.Class {
             this._geometryCoords = geometry.getCoordinates()
             geometry.on('editstart', this._enable, this)
             geometry.on('editend remove', this._disable, this)
-            if (geometry.isEditing()) this.enable()
+            if (geometry.isEditing()) this._enable()
         }
         return this
     }
 
     remove() {
-        this.disable()
+        this._disable()
         if (this._cursorLayer) this._cursorLayer.remove()
         delete this._cursorLayer
         delete this._assistLayers
+        delete this._needDeal
+        delete this._mousePoint
+        delete this._cursor
+        delete this._adsorbPoint
         delete this._drawTool
-        delete this._geometry
-        delete this._geometryCoords
         delete this._map
     }
 
@@ -93,7 +97,7 @@ export class Autoadsorb extends maptalks.Class {
 
     _newCursorLayer() {
         this._cursorLayer = new maptalks.VectorLayer(cursorLayerName, {
-            style: { sylbol: this.options['cursorSymbol'] },
+            style: { symbol: this.options['cursorSymbol'] },
         })
         this._cursorLayer.addTo(this._map).bringToFront()
     }
@@ -111,12 +115,54 @@ export class Autoadsorb extends maptalks.Class {
     }
 
     _enable() {
+        console.log('enable')
         this._isEnable = true
+        if (this._cursorLayer) this._cursorLayer.show()
+        map.on('mousedown', this._mapMousedown, this)
+        map.on('mouseup', this._mapMouseup, this)
+        map.on('mousemove', this._mapMousemove, this)
+        this._updateGeosSet()
     }
 
-    _disable() {
-        this._isEnable = false
+    _mapMousedown() {
+        this._needFindGeometry = !!this._geometry
     }
+
+    _mapMouseup() {
+        this._needFindGeometry = !this._geometry
+    }
+
+    _mapMousemove({ coordinate, domEvent }) {
+        this._needDeal = true
+        this._mousePoint = coordinate
+
+        if (this._cursor) {
+            this._cursor.setCoordinates(coordinate)
+        } else {
+            this._cursor = new maptalks.Marker(coordinate)
+            this._cursor.addTo(this._cursorLayer)
+        }
+
+        if (this.options['needCtrl'] !== domEvent.ctrlKey) {
+            delete this._adsorbPoint
+        }
+    }
+
+    _updateGeosSet() {}
+
+    _disable() {
+        console.log('disable')
+        this._isEnable = false
+        if (this._cursorLayer) this._cursorLayer.hide()
+        map.off('mousedown', this._mapMousedown, this)
+        map.off('mousemove', this._mapMousemove, this)
+        map.off('mouseup', this._mapMouseup, this)
+        this._resetGeosSet()
+        delete this._geometry
+        delete this._geometryCoords
+    }
+
+    _resetGeosSet() {}
 
     _disableMapTool() {
         if (this._map._map_tool) this._map._map_tool.disable()

@@ -6,7 +6,7 @@
 /*!
  * requires maptalks@>=0.46.0 
  */
-import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, VectorLayer } from 'maptalks';
+import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, Marker, VectorLayer } from 'maptalks';
 
 function quickselectStep(arr, k, left, right, compare) {
 
@@ -6305,6 +6305,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype.setMode = function setMode(mode) {
         this.options['mode'] = mode;
+        this._updateGeosSet();
         return this;
     };
 
@@ -6314,6 +6315,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype.setDistance = function setDistance(distance) {
         this.options['distance'] = distance;
+        this._updateGeosSet();
         return this;
     };
 
@@ -6331,7 +6333,7 @@ var Autoadsorb = function (_maptalks$Class) {
             this._drawTool = drawTool;
             drawTool.on('enable', this._enable, this);
             drawTool.on('disable remove', this._disable, this);
-            if (drawTool.isEnabled()) this.enable();
+            if (drawTool.isEnabled()) this._enable();
         }
         return this;
     };
@@ -6344,19 +6346,21 @@ var Autoadsorb = function (_maptalks$Class) {
             this._geometryCoords = geometry.getCoordinates();
             geometry.on('editstart', this._enable, this);
             geometry.on('editend remove', this._disable, this);
-            if (geometry.isEditing()) this.enable();
+            if (geometry.isEditing()) this._enable();
         }
         return this;
     };
 
     Autoadsorb.prototype.remove = function remove() {
-        this.disable();
+        this._disable();
         if (this._cursorLayer) this._cursorLayer.remove();
         delete this._cursorLayer;
         delete this._assistLayers;
+        delete this._needDeal;
+        delete this._mousePoint;
+        delete this._cursor;
+        delete this._adsorbPoint;
         delete this._drawTool;
-        delete this._geometry;
-        delete this._geometryCoords;
         delete this._map;
     };
 
@@ -6368,7 +6372,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
         this._cursorLayer = new VectorLayer(cursorLayerName, {
-            style: { sylbol: this.options['cursorSymbol'] }
+            style: { symbol: this.options['cursorSymbol'] }
         });
         this._cursorLayer.addTo(this._map).bringToFront();
     };
@@ -6388,12 +6392,57 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._enable = function _enable() {
+        console.log('enable');
         this._isEnable = true;
+        if (this._cursorLayer) this._cursorLayer.show();
+        map.on('mousedown', this._mapMousedown, this);
+        map.on('mouseup', this._mapMouseup, this);
+        map.on('mousemove', this._mapMousemove, this);
+        this._updateGeosSet();
     };
 
-    Autoadsorb.prototype._disable = function _disable() {
-        this._isEnable = false;
+    Autoadsorb.prototype._mapMousedown = function _mapMousedown() {
+        this._needFindGeometry = !!this._geometry;
     };
+
+    Autoadsorb.prototype._mapMouseup = function _mapMouseup() {
+        this._needFindGeometry = !this._geometry;
+    };
+
+    Autoadsorb.prototype._mapMousemove = function _mapMousemove(_ref) {
+        var coordinate = _ref.coordinate,
+            domEvent = _ref.domEvent;
+
+        this._needDeal = true;
+        this._mousePoint = coordinate;
+
+        if (this._cursor) {
+            this._cursor.setCoordinates(coordinate);
+        } else {
+            this._cursor = new Marker(coordinate);
+            this._cursor.addTo(this._cursorLayer);
+        }
+
+        if (this.options['needCtrl'] !== domEvent.ctrlKey) {
+            delete this._adsorbPoint;
+        }
+    };
+
+    Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {};
+
+    Autoadsorb.prototype._disable = function _disable() {
+        console.log('disable');
+        this._isEnable = false;
+        if (this._cursorLayer) this._cursorLayer.hide();
+        map.off('mousedown', this._mapMousedown, this);
+        map.off('mousemove', this._mapMousemove, this);
+        map.off('mouseup', this._mapMouseup, this);
+        this._resetGeosSet();
+        delete this._geometry;
+        delete this._geometryCoords;
+    };
+
+    Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {};
 
     Autoadsorb.prototype._disableMapTool = function _disableMapTool() {
         if (this._map._map_tool) this._map._map_tool.disable();
