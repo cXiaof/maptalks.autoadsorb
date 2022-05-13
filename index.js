@@ -28,40 +28,6 @@ export class Autoadsorb extends maptalks.Class {
         this._isEnable = false
     }
 
-    addTo(map) {
-        this._map = map
-        this._newCursorLayer()
-        this._saveAdsorbLayers()
-        return this
-    }
-
-    enable() {
-        this._isEnable = true
-        return this
-    }
-
-    disable() {
-        this._isEnable = false
-        return this
-    }
-
-    isEnable() {
-        return this._isEnable
-    }
-
-    toggleEnable() {
-        return this._isEnable ? this.disable() : this.enable()
-    }
-
-    remove() {
-        this.disable()
-        delete this._isEnable
-        if (this._cursorLayer) this._cursorLayer.remove()
-        delete this._cursorLayer
-        delete this._assistLayers
-        delete this._map
-    }
-
     setMode(mode) {
         this.options['mode'] = mode
         return this
@@ -78,6 +44,51 @@ export class Autoadsorb extends maptalks.Class {
 
     getDistance() {
         return this.options['distance']
+    }
+
+    isEnable() {
+        return this._isEnable
+    }
+
+    bindDrawTool(drawTool) {
+        if (drawTool instanceof maptalks.DrawTool) {
+            if (!this._map) this._addTo(drawTool.getMap())
+            this._drawTool = drawTool
+            drawTool.on('enable', this._enable, this)
+            drawTool.on('disable remove', this._disable, this)
+            if (drawTool.isEnabled()) this.enable()
+        }
+        return this
+    }
+
+    bindGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            if (!this._map) this._addTo(drawTool.getMap())
+            this._disableMapTool()
+            this._geometry = geometry
+            this._geometryCoords = geometry.getCoordinates()
+            geometry.on('editstart', this._enable, this)
+            geometry.on('editend remove', this._disable, this)
+            if (geometry.isEditing()) this.enable()
+        }
+        return this
+    }
+
+    remove() {
+        this.disable()
+        if (this._cursorLayer) this._cursorLayer.remove()
+        delete this._cursorLayer
+        delete this._assistLayers
+        delete this._drawTool
+        delete this._geometry
+        delete this._geometryCoords
+        delete this._map
+    }
+
+    _addTo(map) {
+        this._map = map
+        this._newCursorLayer()
+        this._saveAdsorbLayers()
     }
 
     _newCursorLayer() {
@@ -97,6 +108,18 @@ export class Autoadsorb extends maptalks.Class {
                 this._assistLayers.push(layer)
             }
         })
+    }
+
+    _enable() {
+        this._isEnable = true
+    }
+
+    _disable() {
+        this._isEnable = false
+    }
+
+    _disableMapTool() {
+        if (this._map._map_tool) this._map._map_tool.disable()
     }
 }
 

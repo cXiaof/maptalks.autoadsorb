@@ -6307,40 +6307,6 @@ var Autoadsorb = function (_maptalks$Class) {
         return _this;
     }
 
-    Autoadsorb.prototype.addTo = function addTo(map) {
-        this._map = map;
-        this._newCursorLayer();
-        this._saveAdsorbLayers();
-        return this;
-    };
-
-    Autoadsorb.prototype.enable = function enable() {
-        this._isEnable = true;
-        return this;
-    };
-
-    Autoadsorb.prototype.disable = function disable() {
-        this._isEnable = false;
-        return this;
-    };
-
-    Autoadsorb.prototype.isEnable = function isEnable() {
-        return this._isEnable;
-    };
-
-    Autoadsorb.prototype.toggleEnable = function toggleEnable() {
-        return this._isEnable ? this.disable() : this.enable();
-    };
-
-    Autoadsorb.prototype.remove = function remove() {
-        this.disable();
-        delete this._isEnable;
-        if (this._cursorLayer) this._cursorLayer.remove();
-        delete this._cursorLayer;
-        delete this._assistLayers;
-        delete this._map;
-    };
-
     Autoadsorb.prototype.setMode = function setMode(mode) {
         this.options['mode'] = mode;
         return this;
@@ -6357,6 +6323,51 @@ var Autoadsorb = function (_maptalks$Class) {
 
     Autoadsorb.prototype.getDistance = function getDistance() {
         return this.options['distance'];
+    };
+
+    Autoadsorb.prototype.isEnable = function isEnable() {
+        return this._isEnable;
+    };
+
+    Autoadsorb.prototype.bindDrawTool = function bindDrawTool(drawTool) {
+        if (drawTool instanceof maptalks.DrawTool) {
+            if (!this._map) this._addTo(drawTool.getMap());
+            this._drawTool = drawTool;
+            drawTool.on('enable', this._enable, this);
+            drawTool.on('disable remove', this._disable, this);
+            if (drawTool.isEnabled()) this.enable();
+        }
+        return this;
+    };
+
+    Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
+        if (geometry instanceof maptalks.Geometry) {
+            if (!this._map) this._addTo(drawTool.getMap());
+            this._disableMapTool();
+            this._geometry = geometry;
+            this._geometryCoords = geometry.getCoordinates();
+            geometry.on('editstart', this._enable, this);
+            geometry.on('editend remove', this._disable, this);
+            if (geometry.isEditing()) this.enable();
+        }
+        return this;
+    };
+
+    Autoadsorb.prototype.remove = function remove() {
+        this.disable();
+        if (this._cursorLayer) this._cursorLayer.remove();
+        delete this._cursorLayer;
+        delete this._assistLayers;
+        delete this._drawTool;
+        delete this._geometry;
+        delete this._geometryCoords;
+        delete this._map;
+    };
+
+    Autoadsorb.prototype._addTo = function _addTo(map) {
+        this._map = map;
+        this._newCursorLayer();
+        this._saveAdsorbLayers();
     };
 
     Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
@@ -6378,6 +6389,18 @@ var Autoadsorb = function (_maptalks$Class) {
                 _this2._assistLayers.push(layer);
             }
         });
+    };
+
+    Autoadsorb.prototype._enable = function _enable() {
+        this._isEnable = true;
+    };
+
+    Autoadsorb.prototype._disable = function _disable() {
+        this._isEnable = false;
+    };
+
+    Autoadsorb.prototype._disableMapTool = function _disableMapTool() {
+        if (this._map._map_tool) this._map._map_tool.disable();
     };
 
     return Autoadsorb;
