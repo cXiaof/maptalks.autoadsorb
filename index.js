@@ -143,12 +143,30 @@ export class Autoadsorb extends maptalks.Class {
             this._cursor.addTo(this._cursorLayer)
         }
 
+        this._updateAdsorbPoint(coordinate)
         if (this.options['needCtrl'] !== domEvent.ctrlKey) {
             delete this._adsorbPoint
         }
     }
 
-    _updateGeosSet() {}
+    _updateAdsorbPoint(coordinate) {
+        if (!this._needFindGeometry) return
+        const availGeos = this._findGeometry(coordinate)
+    }
+
+    _findGeometry(coordinate) {}
+
+    _updateGeosSet() {
+        const geometries = this._getAllAssistGeos()
+        console.log(geometries)
+    }
+
+    _getAllAssistGeos() {
+        return this._assistLayers.reduce(
+            (prev, layer) => prev.concat(layer.getGeometries),
+            []
+        )
+    }
 
     _disable() {
         console.log('disable')

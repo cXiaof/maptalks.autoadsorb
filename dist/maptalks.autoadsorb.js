@@ -6427,12 +6427,29 @@ var Autoadsorb = function (_maptalks$Class) {
             this._cursor.addTo(this._cursorLayer);
         }
 
+        this._updateAdsorbPoint(coordinate);
         if (this.options['needCtrl'] !== domEvent.ctrlKey) {
             delete this._adsorbPoint;
         }
     };
 
-    Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {};
+    Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
+        if (!this._needFindGeometry) return;
+        var availGeos = this._findGeometry(coordinate);
+    };
+
+    Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {};
+
+    Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
+        var geometries = this._getAllAssistGeos();
+        console.log(geometries);
+    };
+
+    Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
+        return this._assistLayers.reduce(function (prev, layer) {
+            return prev.concat(layer.getGeometries);
+        }, []);
+    };
 
     Autoadsorb.prototype._disable = function _disable() {
         console.log('disable');
