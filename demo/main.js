@@ -44,7 +44,9 @@ const layerSketch = new maptalks.VectorLayer('sketchPad').addTo(map)
 // new DrawTool
 const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
 
-const autoAdsorb = new maptalks.Autoadsorb().bindDrawTool(drawTool)
+const autoAdsorb = new maptalks.Autoadsorb({
+    layers: [layerSketch],
+}).bindDrawTool(drawTool)
 
 drawTool.on('drawend', (param) => {
     const { geometry } = param

@@ -6,125 +6,7 @@
 /*!
  * requires maptalks@>=0.46.0 
  */
-import { Class, DrawTool, Geometry, INTERNAL_LAYER_PREFIX, Marker, VectorLayer } from 'maptalks';
-
-function quickselectStep(arr, k, left, right, compare) {
-
-    while (right > left) {
-        if (right - left > 600) {
-            var n = right - left + 1;
-            var m = k - left + 1;
-            var z = Math.log(n);
-            var s = 0.5 * Math.exp(2 * z / 3);
-            var sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
-            var newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
-            var newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
-            quickselectStep(arr, k, newLeft, newRight, compare);
-        }
-
-        var t = arr[k];
-        var i = left;
-        var j = right;
-
-        swap(arr, left, k);
-        if (compare(arr[right], t) > 0) swap(arr, left, right);
-
-        while (i < j) {
-            swap(arr, i, j);
-            i++;
-            j--;
-            while (compare(arr[i], t) < 0) {
-                i++;
-            }while (compare(arr[j], t) > 0) {
-                j--;
-            }
-        }
-
-        if (compare(arr[left], t) === 0) swap(arr, left, j);else {
-            j++;
-            swap(arr, j, right);
-        }
-
-        if (j <= k) left = j + 1;
-        if (k <= j) right = j - 1;
-    }
-}
-
-function swap(arr, i, j) {
-    var tmp = arr[i];
-    arr[i] = arr[j];
-    arr[j] = tmp;
-}
-
-function findItem(item, items, equalsFn) {
-    if (!equalsFn) return items.indexOf(item);
-
-    for (var i = 0; i < items.length; i++) {
-        if (equalsFn(item, items[i])) return i;
-    }
-    return -1;
-}
-
-// calculate node's bbox from bboxes of its children
-function calcBBox(node, toBBox) {
-    distBBox(node, 0, node.children.length, toBBox, node);
-}
-
-// min bounding rectangle of node children from k to p-1
-function distBBox(node, k, p, toBBox, destNode) {
-    if (!destNode) destNode = createNode(null);
-    destNode.minX = Infinity;
-    destNode.minY = Infinity;
-    destNode.maxX = -Infinity;
-    destNode.maxY = -Infinity;
-
-    for (var i = k; i < p; i++) {
-        var child = node.children[i];
-        extend(destNode, node.leaf ? toBBox(child) : child);
-    }
-
-    return destNode;
-}
-
-function extend(a, b) {
-    a.minX = Math.min(a.minX, b.minX);
-    a.minY = Math.min(a.minY, b.minY);
-    a.maxX = Math.max(a.maxX, b.maxX);
-    a.maxY = Math.max(a.maxY, b.maxY);
-    return a;
-}
-
-function bboxArea(a) {
-    return (a.maxX - a.minX) * (a.maxY - a.minY);
-}
-function bboxMargin(a) {
-    return a.maxX - a.minX + (a.maxY - a.minY);
-}
-
-function intersectionArea(a, b) {
-    var minX = Math.max(a.minX, b.minX);
-    var minY = Math.max(a.minY, b.minY);
-    var maxX = Math.min(a.maxX, b.maxX);
-    var maxY = Math.min(a.maxY, b.maxY);
-
-    return Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
-}
-
-function contains(a, b) {
-    return a.minX <= b.minX && a.minY <= b.minY && b.maxX <= a.maxX && b.maxY <= a.maxY;
-}
-
-function createNode(children) {
-    return {
-        children: children,
-        height: 1,
-        leaf: true,
-        minX: Infinity,
-        minY: Infinity,
-        maxX: -Infinity,
-        maxY: -Infinity
-    };
-}
+import { Circle, Class, DrawTool, Ellipse, Geometry, GeometryCollection, INTERNAL_LAYER_PREFIX, Marker, VectorLayer } from 'maptalks';
 
 /**
  * @module helpers
@@ -177,7 +59,21 @@ function createNode(children) {
  *
  * //=feature
  */
-
+function feature(geom, properties, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var feat = { type: "Feature" };
+    if (options.id === 0 || options.id) {
+        feat.id = options.id;
+    }
+    if (options.bbox) {
+        feat.bbox = options.bbox;
+    }
+    feat.properties = properties || {};
+    feat.geometry = geom;
+    return feat;
+}
 /**
  * Creates a GeoJSON {@link Geometry} from a Geometry string type & coordinates.
  * For GeometryCollection type use `helpers.geometryCollection`
@@ -209,7 +105,28 @@ function createNode(children) {
  *
  * //=point
  */
-
+function point(coordinates, properties, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    if (!coordinates) {
+        throw new Error("coordinates is required");
+    }
+    if (!Array.isArray(coordinates)) {
+        throw new Error("coordinates must be an Array");
+    }
+    if (coordinates.length < 2) {
+        throw new Error("coordinates must be at least 2 numbers long");
+    }
+    if (!isNumber(coordinates[0]) || !isNumber(coordinates[1])) {
+        throw new Error("coordinates must contain numbers");
+    }
+    var geom = {
+        type: "Point",
+        coordinates: coordinates
+    };
+    return feature(geom, properties, options);
+}
 /**
  * Creates a {@link Point} {@link FeatureCollection} from an Array of Point coordinates.
  *
@@ -326,7 +243,20 @@ function createNode(children) {
  *
  * //=collection
  */
-
+function featureCollection(features, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var fc = { type: "FeatureCollection" };
+    if (options.id) {
+        fc.id = options.id;
+    }
+    if (options.bbox) {
+        fc.bbox = options.bbox;
+    }
+    fc.features = features;
+    return fc;
+}
 /**
  * Creates a {@link Feature<MultiLineString>} based on a
  * coordinate array. Properties can be added optionally.
@@ -503,7 +433,9 @@ function createNode(children) {
  * turf.isNumber('foo')
  * //=false
  */
-
+function isNumber(num) {
+    return !isNaN(num) && num !== null && !Array.isArray(num);
+}
 /**
  * isObject
  *
@@ -559,6 +491,441 @@ function createNode(children) {
  * validateId(undefined)
  * //=Error
  */
+
+/**
+ * Callback for coordEach
+ *
+ * @callback coordEachCallback
+ * @param {Array<number>} currentCoord The current coordinate being processed.
+ * @param {number} coordIndex The current index of the coordinate being processed.
+ * @param {number} featureIndex The current index of the Feature being processed.
+ * @param {number} multiFeatureIndex The current index of the Multi-Feature being processed.
+ * @param {number} geometryIndex The current index of the Geometry being processed.
+ */
+
+/**
+ * Iterate over coordinates in any GeoJSON object, similar to Array.forEach()
+ *
+ * @name coordEach
+ * @param {FeatureCollection|Feature|Geometry} geojson any GeoJSON object
+ * @param {Function} callback a method that takes (currentCoord, coordIndex, featureIndex, multiFeatureIndex)
+ * @param {boolean} [excludeWrapCoord=false] whether or not to include the final coordinate of LinearRings that wraps the ring in its iteration.
+ * @returns {void}
+ * @example
+ * var features = turf.featureCollection([
+ *   turf.point([26, 37], {"foo": "bar"}),
+ *   turf.point([36, 53], {"hello": "world"})
+ * ]);
+ *
+ * turf.coordEach(features, function (currentCoord, coordIndex, featureIndex, multiFeatureIndex, geometryIndex) {
+ *   //=currentCoord
+ *   //=coordIndex
+ *   //=featureIndex
+ *   //=multiFeatureIndex
+ *   //=geometryIndex
+ * });
+ */
+function coordEach(geojson, callback, excludeWrapCoord) {
+  // Handles null Geometry -- Skips this GeoJSON
+  if (geojson === null) return;
+  var j,
+      k,
+      l,
+      geometry$$1,
+      stopG,
+      coords,
+      geometryMaybeCollection,
+      wrapShrink = 0,
+      coordIndex = 0,
+      isGeometryCollection,
+      type = geojson.type,
+      isFeatureCollection = type === "FeatureCollection",
+      isFeature = type === "Feature",
+      stop = isFeatureCollection ? geojson.features.length : 1;
+
+  // This logic may look a little weird. The reason why it is that way
+  // is because it's trying to be fast. GeoJSON supports multiple kinds
+  // of objects at its root: FeatureCollection, Features, Geometries.
+  // This function has the responsibility of handling all of them, and that
+  // means that some of the `for` loops you see below actually just don't apply
+  // to certain inputs. For instance, if you give this just a
+  // Point geometry, then both loops are short-circuited and all we do
+  // is gradually rename the input until it's called 'geometry'.
+  //
+  // This also aims to allocate as few resources as possible: just a
+  // few numbers and booleans, rather than any temporary arrays as would
+  // be required with the normalization approach.
+  for (var featureIndex = 0; featureIndex < stop; featureIndex++) {
+    geometryMaybeCollection = isFeatureCollection ? geojson.features[featureIndex].geometry : isFeature ? geojson.geometry : geojson;
+    isGeometryCollection = geometryMaybeCollection ? geometryMaybeCollection.type === "GeometryCollection" : false;
+    stopG = isGeometryCollection ? geometryMaybeCollection.geometries.length : 1;
+
+    for (var geomIndex = 0; geomIndex < stopG; geomIndex++) {
+      var multiFeatureIndex = 0;
+      var geometryIndex = 0;
+      geometry$$1 = isGeometryCollection ? geometryMaybeCollection.geometries[geomIndex] : geometryMaybeCollection;
+
+      // Handles null Geometry -- Skips this geometry
+      if (geometry$$1 === null) continue;
+      coords = geometry$$1.coordinates;
+      var geomType = geometry$$1.type;
+
+      wrapShrink = excludeWrapCoord && (geomType === "Polygon" || geomType === "MultiPolygon") ? 1 : 0;
+
+      switch (geomType) {
+        case null:
+          break;
+        case "Point":
+          if (callback(coords, coordIndex, featureIndex, multiFeatureIndex, geometryIndex) === false) return false;
+          coordIndex++;
+          multiFeatureIndex++;
+          break;
+        case "LineString":
+        case "MultiPoint":
+          for (j = 0; j < coords.length; j++) {
+            if (callback(coords[j], coordIndex, featureIndex, multiFeatureIndex, geometryIndex) === false) return false;
+            coordIndex++;
+            if (geomType === "MultiPoint") multiFeatureIndex++;
+          }
+          if (geomType === "LineString") multiFeatureIndex++;
+          break;
+        case "Polygon":
+        case "MultiLineString":
+          for (j = 0; j < coords.length; j++) {
+            for (k = 0; k < coords[j].length - wrapShrink; k++) {
+              if (callback(coords[j][k], coordIndex, featureIndex, multiFeatureIndex, geometryIndex) === false) return false;
+              coordIndex++;
+            }
+            if (geomType === "MultiLineString") multiFeatureIndex++;
+            if (geomType === "Polygon") geometryIndex++;
+          }
+          if (geomType === "Polygon") multiFeatureIndex++;
+          break;
+        case "MultiPolygon":
+          for (j = 0; j < coords.length; j++) {
+            geometryIndex = 0;
+            for (k = 0; k < coords[j].length; k++) {
+              for (l = 0; l < coords[j][k].length - wrapShrink; l++) {
+                if (callback(coords[j][k][l], coordIndex, featureIndex, multiFeatureIndex, geometryIndex) === false) return false;
+                coordIndex++;
+              }
+              geometryIndex++;
+            }
+            multiFeatureIndex++;
+          }
+          break;
+        case "GeometryCollection":
+          for (j = 0; j < geometry$$1.geometries.length; j++) {
+            if (coordEach(geometry$$1.geometries[j], callback, excludeWrapCoord) === false) return false;
+          }break;
+        default:
+          throw new Error("Unknown Geometry Type");
+      }
+    }
+  }
+}
+
+/**
+ * Callback for featureEach
+ *
+ * @callback featureEachCallback
+ * @param {Feature<any>} currentFeature The current Feature being processed.
+ * @param {number} featureIndex The current index of the Feature being processed.
+ */
+
+/**
+ * Iterate over features in any GeoJSON object, similar to
+ * Array.forEach.
+ *
+ * @name featureEach
+ * @param {FeatureCollection|Feature|Geometry} geojson any GeoJSON object
+ * @param {Function} callback a method that takes (currentFeature, featureIndex)
+ * @returns {void}
+ * @example
+ * var features = turf.featureCollection([
+ *   turf.point([26, 37], {foo: 'bar'}),
+ *   turf.point([36, 53], {hello: 'world'})
+ * ]);
+ *
+ * turf.featureEach(features, function (currentFeature, featureIndex) {
+ *   //=currentFeature
+ *   //=featureIndex
+ * });
+ */
+function featureEach(geojson, callback) {
+  if (geojson.type === "Feature") {
+    callback(geojson, 0);
+  } else if (geojson.type === "FeatureCollection") {
+    for (var i = 0; i < geojson.features.length; i++) {
+      if (callback(geojson.features[i], i) === false) break;
+    }
+  }
+}
+
+/**
+ * Takes a feature or set of features and returns all positions as {@link Point|points}.
+ *
+ * @name explode
+ * @param {GeoJSON} geojson input features
+ * @returns {FeatureCollection<point>} points representing the exploded input features
+ * @throws {Error} if it encounters an unknown geometry type
+ * @example
+ * var polygon = turf.polygon([[[-81, 41], [-88, 36], [-84, 31], [-80, 33], [-77, 39], [-81, 41]]]);
+ *
+ * var explode = turf.explode(polygon);
+ *
+ * //addToMap
+ * var addToMap = [polygon, explode]
+ */
+function explode(geojson) {
+  var points$$1 = [];
+  if (geojson.type === "FeatureCollection") {
+    featureEach(geojson, function (feature$$1) {
+      coordEach(feature$$1, function (coord) {
+        points$$1.push(point(coord, feature$$1.properties));
+      });
+    });
+  } else {
+    coordEach(geojson, function (coord) {
+      points$$1.push(point(coord, geojson.properties));
+    });
+  }
+  return featureCollection(points$$1);
+}
+
+/**
+ * Unwrap a coordinate from a Point Feature, Geometry or a single coordinate.
+ *
+ * @name getCoord
+ * @param {Array<number>|Geometry<Point>|Feature<Point>} coord GeoJSON Point or an Array of numbers
+ * @returns {Array<number>} coordinates
+ * @example
+ * var pt = turf.point([10, 10]);
+ *
+ * var coord = turf.getCoord(pt);
+ * //= [10, 10]
+ */
+
+/**
+ * Unwrap coordinates from a Feature, Geometry Object or an Array
+ *
+ * @name getCoords
+ * @param {Array<any>|Geometry|Feature} coords Feature, Geometry Object or an Array
+ * @returns {Array<any>} coordinates
+ * @example
+ * var poly = turf.polygon([[[119.32, -8.7], [119.55, -8.69], [119.51, -8.54], [119.32, -8.7]]]);
+ *
+ * var coords = turf.getCoords(poly);
+ * //= [[[119.32, -8.7], [119.55, -8.69], [119.51, -8.54], [119.32, -8.7]]]
+ */
+
+/**
+ * Checks if coordinates contains a number
+ *
+ * @name containsNumber
+ * @param {Array<any>} coordinates GeoJSON Coordinates
+ * @returns {boolean} true if Array contains a number
+ */
+
+/**
+ * Enforce expectations about types of GeoJSON objects for Turf.
+ *
+ * @name geojsonType
+ * @param {GeoJSON} value any GeoJSON object
+ * @param {string} type expected GeoJSON type
+ * @param {string} name name of calling function
+ * @throws {Error} if value is not the expected type.
+ */
+
+/**
+ * Enforce expectations about types of {@link Feature} inputs for Turf.
+ * Internally this uses {@link geojsonType} to judge geometry types.
+ *
+ * @name featureOf
+ * @param {Feature} feature a feature with an expected geometry type
+ * @param {string} type expected GeoJSON type
+ * @param {string} name name of calling function
+ * @throws {Error} error if value is not the expected type.
+ */
+
+/**
+ * Enforce expectations about types of {@link FeatureCollection} inputs for Turf.
+ * Internally this uses {@link geojsonType} to judge geometry types.
+ *
+ * @name collectionOf
+ * @param {FeatureCollection} featureCollection a FeatureCollection for which features will be judged
+ * @param {string} type expected GeoJSON type
+ * @param {string} name name of calling function
+ * @throws {Error} if value is not the expected type.
+ */
+
+/**
+ * Get Geometry from Feature or Geometry Object
+ *
+ * @param {Feature|Geometry} geojson GeoJSON Feature or Geometry Object
+ * @returns {Geometry|null} GeoJSON Geometry Object
+ * @throws {Error} if geojson is not a Feature or Geometry Object
+ * @example
+ * var point = {
+ *   "type": "Feature",
+ *   "properties": {},
+ *   "geometry": {
+ *     "type": "Point",
+ *     "coordinates": [110, 40]
+ *   }
+ * }
+ * var geom = turf.getGeom(point)
+ * //={"type": "Point", "coordinates": [110, 40]}
+ */
+
+/**
+ * Get GeoJSON object's type, Geometry type is prioritize.
+ *
+ * @param {GeoJSON} geojson GeoJSON object
+ * @param {string} [name="geojson"] name of the variable to display in error message (unused)
+ * @returns {string} GeoJSON type
+ * @example
+ * var point = {
+ *   "type": "Feature",
+ *   "properties": {},
+ *   "geometry": {
+ *     "type": "Point",
+ *     "coordinates": [110, 40]
+ *   }
+ * }
+ * var geom = turf.getType(point)
+ * //="Point"
+ */
+
+/**
+ * @private
+ */
+
+/**
+ * @private
+ */
+
+/**
+ * @private
+ */
+
+function quickselectStep(arr, k, left, right, compare) {
+
+    while (right > left) {
+        if (right - left > 600) {
+            var n = right - left + 1;
+            var m = k - left + 1;
+            var z = Math.log(n);
+            var s = 0.5 * Math.exp(2 * z / 3);
+            var sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
+            var newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
+            var newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
+            quickselectStep(arr, k, newLeft, newRight, compare);
+        }
+
+        var t = arr[k];
+        var i = left;
+        var j = right;
+
+        swap(arr, left, k);
+        if (compare(arr[right], t) > 0) swap(arr, left, right);
+
+        while (i < j) {
+            swap(arr, i, j);
+            i++;
+            j--;
+            while (compare(arr[i], t) < 0) {
+                i++;
+            }while (compare(arr[j], t) > 0) {
+                j--;
+            }
+        }
+
+        if (compare(arr[left], t) === 0) swap(arr, left, j);else {
+            j++;
+            swap(arr, j, right);
+        }
+
+        if (j <= k) left = j + 1;
+        if (k <= j) right = j - 1;
+    }
+}
+
+function swap(arr, i, j) {
+    var tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+function findItem(item, items, equalsFn) {
+    if (!equalsFn) return items.indexOf(item);
+
+    for (var i = 0; i < items.length; i++) {
+        if (equalsFn(item, items[i])) return i;
+    }
+    return -1;
+}
+
+// calculate node's bbox from bboxes of its children
+function calcBBox(node, toBBox) {
+    distBBox(node, 0, node.children.length, toBBox, node);
+}
+
+// min bounding rectangle of node children from k to p-1
+function distBBox(node, k, p, toBBox, destNode) {
+    if (!destNode) destNode = createNode(null);
+    destNode.minX = Infinity;
+    destNode.minY = Infinity;
+    destNode.maxX = -Infinity;
+    destNode.maxY = -Infinity;
+
+    for (var i = k; i < p; i++) {
+        var child = node.children[i];
+        extend(destNode, node.leaf ? toBBox(child) : child);
+    }
+
+    return destNode;
+}
+
+function extend(a, b) {
+    a.minX = Math.min(a.minX, b.minX);
+    a.minY = Math.min(a.minY, b.minY);
+    a.maxX = Math.max(a.maxX, b.maxX);
+    a.maxY = Math.max(a.maxY, b.maxY);
+    return a;
+}
+
+function bboxArea(a) {
+    return (a.maxX - a.minX) * (a.maxY - a.minY);
+}
+function bboxMargin(a) {
+    return a.maxX - a.minX + (a.maxY - a.minY);
+}
+
+function intersectionArea(a, b) {
+    var minX = Math.max(a.minX, b.minX);
+    var minY = Math.max(a.minY, b.minY);
+    var maxX = Math.min(a.maxX, b.maxX);
+    var maxY = Math.min(a.maxY, b.maxY);
+
+    return Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
+}
+
+function contains(a, b) {
+    return a.minX <= b.minX && a.minY <= b.minY && b.maxX <= a.maxX && b.maxY <= a.maxY;
+}
+
+function createNode(children) {
+    return {
+        children: children,
+        height: 1,
+        leaf: true,
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity
+    };
+}
 
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -6289,7 +6656,7 @@ var options = {
     }
 };
 
-var cursorLayerName = INTERNAL_LAYER_PREFIX + '_cxiaof_autoadsorb';
+var cursorLayerName = INTERNAL_LAYER_PREFIX + 'cxiaof_autoadsorb';
 
 var Autoadsorb = function (_maptalks$Class) {
     _inherits(Autoadsorb, _maptalks$Class);
@@ -6437,14 +6804,56 @@ var Autoadsorb = function (_maptalks$Class) {
     Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {};
 
     Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
-        var geometries = this._getAllAssistGeos();
-        console.log(geometries);
+        var geos = this._getAllAssistGeos();
+        if (['auto', 'vertux'].includes(this.options['mode'])) {
+            this._geosSetPoint = this._parseToPoints(geos);
+        }
+        if (['auto', 'border'].includes(this.options['mode'])) {
+            this._geosSetLine = this._parseToLines(geos);
+        }
+        console.log(this._geosSetPoint);
     };
 
     Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
-        return this._assistLayers.reduce(function (prev, layer) {
-            return prev.concat(layer.getGeometries);
+        return this._assistLayers.reduce(function (target, layer) {
+            return target.concat(layer.getGeometries());
         }, []);
+    };
+
+    Autoadsorb.prototype._parseToPoints = function _parseToPoints(geos) {
+        var _this3 = this;
+
+        var points = [];
+        geos.forEach(function (geo) {
+            if (geo instanceof GeometryCollection) {
+                points = points.concat(explode(geo.toGeoJSON()).features);
+            } else {
+                if (geo instanceof Circle || geo instanceof Ellipse) {
+                    geo = geo.copy();
+                    var _geo = geo,
+                        _options = _geo.options;
+
+                    var shellPoints = _options['numberOfShellPoints'];
+                    _options.numberOfShellPoints = Math.max(shellPoints, 360);
+                    geo.setOptions(_options);
+                    points.push(_this3._getCenterFeature(geo));
+                }
+                points = points.concat(explode(geo.toGeoJSON()).features);
+            }
+        });
+        return points;
+    };
+
+    Autoadsorb.prototype._getCenterFeature = function _getCenterFeature(geo) {
+        return {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: geo.getCenter().toArray() },
+            properties: {}
+        };
+    };
+
+    Autoadsorb.prototype._parseToLines = function _parseToLines(geos) {
+        return [];
     };
 
     Autoadsorb.prototype._disable = function _disable() {

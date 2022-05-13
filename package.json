@@ -30,6 +30,8 @@
     "maptalks": ">=0.46.0"
   },
   "dependencies": {
+    "@turf/explode": "^6.5.0",
+    "@turf/polygon-to-line": "^6.5.0",
     "geojson-rbush": "^3.2.0",
     "lodash.differencewith": "^4.5.0",
     "lodash.findindex": "^4.6.0",

@@ -1,4 +1,6 @@
 import * as maptalks from 'maptalks'
+import explode from '@turf/explode'
+import polygonToLine from '@turf/polygon-to-line'
 import rbush from 'geojson-rbush'
 import isEqual from 'lodash.isequal'
 import differenceWith from 'lodash.differencewith'
@@ -20,7 +22,7 @@ const options = {
     },
 }
 
-const cursorLayerName = `${maptalks.INTERNAL_LAYER_PREFIX}_cxiaof_autoadsorb`
+const cursorLayerName = `${maptalks.INTERNAL_LAYER_PREFIX}cxiaof_autoadsorb`
 
 export class Autoadsorb extends maptalks.Class {
     constructor(options) {
@@ -157,15 +159,56 @@ export class Autoadsorb extends maptalks.Class {
     _findGeometry(coordinate) {}
 
     _updateGeosSet() {
-        const geometries = this._getAllAssistGeos()
-        console.log(geometries)
+        const geos = this._getAllAssistGeos()
+        if (['auto', 'vertux'].includes(this.options['mode'])) {
+            this._geosSetPoint = this._parseToPoints(geos)
+        }
+        if (['auto', 'border'].includes(this.options['mode'])) {
+            this._geosSetLine = this._parseToLines(geos)
+        }
+        console.log(this._geosSetPoint)
     }
 
     _getAllAssistGeos() {
         return this._assistLayers.reduce(
-            (prev, layer) => prev.concat(layer.getGeometries),
+            (target, layer) => target.concat(layer.getGeometries()),
             []
         )
+    }
+
+    _parseToPoints(geos) {
+        let points = []
+        geos.forEach((geo) => {
+            if (geo instanceof maptalks.GeometryCollection) {
+                points = points.concat(explode(geo.toGeoJSON()).features)
+            } else {
+                if (
+                    geo instanceof maptalks.Circle ||
+                    geo instanceof maptalks.Ellipse
+                ) {
+                    geo = geo.copy()
+                    const { options } = geo
+                    const shellPoints = options['numberOfShellPoints']
+                    options.numberOfShellPoints = Math.max(shellPoints, 360)
+                    geo.setOptions(options)
+                    points.push(this._getCenterFeature(geo))
+                }
+                points = points.concat(explode(geo.toGeoJSON()).features)
+            }
+        })
+        return points
+    }
+
+    _getCenterFeature(geo) {
+        return {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: geo.getCenter().toArray() },
+            properties: {},
+        }
+    }
+
+    _parseToLines(geos) {
+        return []
     }
 
     _disable() {
