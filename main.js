@@ -195,7 +195,7 @@ export class Autoadsorb extends maptalks.Class {
     let geos = this.adsorblayer.getGeometries()
     if (this.assistLayers)
       this.assistLayers.forEach((name) =>
-        geos.push(...map.getLayer(name).getGeometries())
+        geos.push(...map.getLayer(name).getGeometries()),
       )
     return geos
   }
@@ -224,7 +224,7 @@ export class Autoadsorb extends maptalks.Class {
 
   _createMarkers(coords) {
     return flattenDeep(coords).map((coord) =>
-      new maptalks.Marker(coord, { properties: {} }).toGeoJSON()
+      new maptalks.Marker(coord, { properties: {} }).toGeoJSON(),
     )
   }
 
@@ -244,13 +244,13 @@ export class Autoadsorb extends maptalks.Class {
         case 'MultiPolygon':
           coordinates.forEach((coords) =>
             coords.forEach((coordsItem) =>
-              geos.push(...this._createLine(coordsItem, geo))
-            )
+              geos.push(...this._createLine(coordsItem, geo)),
+            ),
           )
           break
         case 'Polygon':
           coordinates.forEach((coords) =>
-            geos.push(...this._createLine(coords, geo))
+            geos.push(...this._createLine(coords, geo)),
           )
           break
         default:
@@ -458,7 +458,7 @@ export class Autoadsorb extends maptalks.Class {
     const start = [x, y]
     const end = feature.geometry.coordinates
     return Math.sqrt(
-      Math.pow(start[0] - end[0], 2) + Math.pow(start[1] - end[1], 2)
+      Math.pow(start[0] - end[0], 2) + Math.pow(start[1] - end[1], 2),
     )
   }
 
@@ -466,7 +466,7 @@ export class Autoadsorb extends maptalks.Class {
     const { x, y } = this._mousePoint
     const { A, B, C } = this._setEquation(feature)
     const distance = Math.abs(
-      (A * x + B * y + C) / Math.sqrt(Math.pow(A, 2) + Math.pow(B, 2))
+      (A * x + B * y + C) / Math.sqrt(Math.pow(A, 2) + Math.pow(B, 2)),
     )
     return distance
   }
@@ -631,7 +631,7 @@ export class Autoadsorb extends maptalks.Class {
             const coordsNew = differenceWith(
               coords,
               this.geometryCoords,
-              isEqual
+              isEqual,
             )[0]
             const coordsIndex = findIndex(coords, coordsNew)
             coords[coordsIndex].x = x

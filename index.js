@@ -172,7 +172,7 @@ export class Autoadsorb extends maptalks.Class {
   _getAllAssistGeos() {
     return this._assistLayers.reduce(
       (target, layer) => target.concat(layer.getGeometries()),
-      []
+      [],
     )
   }
 
@@ -208,7 +208,7 @@ export class Autoadsorb extends maptalks.Class {
     let lines = []
     geos = geos.filter(
       (geo) =>
-        !(geo instanceof maptalks.Marker || geo instanceof maptalks.MultiPoint)
+        !(geo instanceof maptalks.Marker || geo instanceof maptalks.MultiPoint),
     )
     geos.forEach((geo) => {
       if (geo instanceof maptalks.LineString) {
@@ -234,7 +234,7 @@ export class Autoadsorb extends maptalks.Class {
     if (result.type === 'Feature') return flatten(result).features
     return result.features.reduce(
       (prev, cur) => prev.concat(flatten(cur).features),
-      []
+      [],
     )
   }
 

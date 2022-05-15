@@ -10,11 +10,11 @@ gulp.task(
   gulp.series('build', (done) => {
     bundleHelper.minify()
     done()
-  })
+  }),
 )
 
 gulp.task('watch', () =>
-  gulp.watch(['index.js', './gulpfile.js'], gulp.series('build'))
+  gulp.watch(['index.js', './gulpfile.js'], gulp.series('build')),
 )
 
 // const { TestHelper } = require('maptalks-build-helpers')

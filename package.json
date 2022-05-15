@@ -2,13 +2,6 @@
   "name": "maptalks.autoadsorb",
   "version": "0.4.0",
   "description": "Adsorb vertux/border/both of geos on layer When drawing or editing",
-  "license": "MIT",
-  "author": "cXiaof",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/cXiaof/maptalks.autoadsorb.git"
-  },
-  "main": "dist/maptalks.autoadsorb.min.js",
   "keywords": [
     "maptalks",
     "autoadsorb",
@@ -16,18 +9,22 @@
     "snap",
     "snapto"
   ],
+  "homepage": "https://github.com/cXiaof/maptalks.autoadsorb",
   "bugs": {
     "url": "https://github.com/cXiaof/maptalks.autoadsorb/issues"
   },
-  "homepage": "https://github.com/cXiaof/maptalks.autoadsorb",
-  "scripts": {
-    "prepublish": "gulp minify",
-    "b": "gulp minify",
-    "watch": "gulp watch",
-    "w": "gulp watch"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cXiaof/maptalks.autoadsorb.git"
   },
-  "peerDependencies": {
-    "maptalks": ">=0.46.0"
+  "license": "MIT",
+  "author": "cXiaof",
+  "main": "dist/maptalks.autoadsorb.min.js",
+  "scripts": {
+    "b": "gulp minify",
+    "prepublish": "gulp minify",
+    "w": "gulp watch",
+    "watch": "gulp watch"
   },
   "dependencies": {
     "@turf/explode": "^6.5.0",
@@ -46,6 +43,10 @@
     "gulp": "^4.0.2",
     "maptalks": "^1.0.0-rc.4",
     "maptalks-build-helpers": "^0.4.5",
-    "prettier": "^2.6.2"
+    "prettier": "^2.6.2",
+    "prettier-plugin-packagejson": "^2.2.18"
+  },
+  "peerDependencies": {
+    "maptalks": ">=0.46.0"
   }
 }

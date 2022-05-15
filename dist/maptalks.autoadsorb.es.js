@@ -6927,269 +6927,269 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : _defaults(subClass, superClass); }
 
 var options = {
-    mode: 'auto',
-    layers: [],
-    distance: 10,
-    needCtrl: false,
-    cursorSymbol: {
-        markerType: 'ellipse',
-        markerFill: '#de3333',
-        markerWidth: 4,
-        markerHeight: 4,
-        markerLineWidth: 0
-    }
+  mode: 'auto',
+  layers: [],
+  distance: 10,
+  needCtrl: false,
+  cursorSymbol: {
+    markerType: 'ellipse',
+    markerFill: '#de3333',
+    markerWidth: 4,
+    markerHeight: 4,
+    markerLineWidth: 0
+  }
 };
 
 var cursorLayerName = INTERNAL_LAYER_PREFIX + 'cxiaof_autoadsorb';
 
 var Autoadsorb = function (_maptalks$Class) {
-    _inherits(Autoadsorb, _maptalks$Class);
+  _inherits(Autoadsorb, _maptalks$Class);
 
-    function Autoadsorb(options) {
-        _classCallCheck(this, Autoadsorb);
+  function Autoadsorb(options) {
+    _classCallCheck(this, Autoadsorb);
 
-        var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
+    var _this = _possibleConstructorReturn(this, _maptalks$Class.call(this, options));
 
-        _this._isEnable = false;
-        return _this;
+    _this._isEnable = false;
+    return _this;
+  }
+
+  Autoadsorb.prototype.setMode = function setMode(mode) {
+    this.options['mode'] = mode;
+    this._updateGeosSet();
+    return this;
+  };
+
+  Autoadsorb.prototype.getMode = function getMode() {
+    return this.options['mode'];
+  };
+
+  Autoadsorb.prototype.setDistance = function setDistance(distance) {
+    this.options['distance'] = distance;
+    this._updateGeosSet();
+    return this;
+  };
+
+  Autoadsorb.prototype.getDistance = function getDistance() {
+    return this.options['distance'];
+  };
+
+  Autoadsorb.prototype.isEnable = function isEnable() {
+    return this._isEnable;
+  };
+
+  Autoadsorb.prototype.bindDrawTool = function bindDrawTool(drawTool) {
+    if (drawTool instanceof DrawTool) {
+      if (!this._map) this._addTo(drawTool.getMap());
+      this._drawTool = drawTool;
+      drawTool.on('enable', this._enable, this);
+      drawTool.on('disable remove', this._disable, this);
+      if (drawTool.isEnabled()) this._enable();
+    }
+    return this;
+  };
+
+  Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
+    if (geometry instanceof Geometry) {
+      if (!this._map) this._addTo(drawTool.getMap());
+      this._disableMapTool();
+      this._geometry = geometry;
+      this._geometryCoords = geometry.getCoordinates();
+      geometry.on('editstart', this._enable, this);
+      geometry.on('editend remove', this._disable, this);
+      if (geometry.isEditing()) this._enable();
+    }
+    return this;
+  };
+
+  Autoadsorb.prototype.remove = function remove() {
+    this._disable();
+    if (this._cursorLayer) this._cursorLayer.remove();
+    delete this._cursorLayer;
+    delete this._assistLayers;
+    delete this._needDeal;
+    delete this._mousePoint;
+    delete this._cursor;
+    delete this._adsorbPoint;
+    delete this._drawTool;
+    delete this._map;
+  };
+
+  Autoadsorb.prototype._addTo = function _addTo(map) {
+    this._map = map;
+    this._newCursorLayer();
+    this._saveAdsorbLayers();
+  };
+
+  Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
+    this._cursorLayer = new VectorLayer(cursorLayerName, {
+      style: { symbol: this.options['cursorSymbol'] }
+    });
+    this._cursorLayer.addTo(this._map).bringToFront();
+  };
+
+  Autoadsorb.prototype._saveAdsorbLayers = function _saveAdsorbLayers() {
+    var _this2 = this;
+
+    this._assistLayers = [];
+    this.options['layers'].forEach(function (layer) {
+      if (typeof layer === 'string') {
+        layer = _this2._map.getLayer(layer);
+      }
+      if (layer instanceof VectorLayer) {
+        _this2._assistLayers.push(layer);
+      }
+    });
+  };
+
+  Autoadsorb.prototype._enable = function _enable() {
+    console.log('enable');
+    this._isEnable = true;
+    if (this._cursorLayer) this._cursorLayer.show();
+    map.on('mousedown', this._mapMousedown, this);
+    map.on('mouseup', this._mapMouseup, this);
+    map.on('mousemove', this._mapMousemove, this);
+    this._updateGeosSet();
+  };
+
+  Autoadsorb.prototype._mapMousedown = function _mapMousedown() {
+    this._needFindGeometry = !!this._geometry;
+  };
+
+  Autoadsorb.prototype._mapMouseup = function _mapMouseup() {
+    this._needFindGeometry = !this._geometry;
+  };
+
+  Autoadsorb.prototype._mapMousemove = function _mapMousemove(_ref) {
+    var coordinate = _ref.coordinate,
+        domEvent = _ref.domEvent;
+
+    this._needDeal = true;
+    this._mousePoint = coordinate;
+
+    if (this._cursor) {
+      this._cursor.setCoordinates(coordinate);
+    } else {
+      this._cursor = new Marker(coordinate);
+      this._cursor.addTo(this._cursorLayer);
     }
 
-    Autoadsorb.prototype.setMode = function setMode(mode) {
-        this.options['mode'] = mode;
-        this._updateGeosSet();
-        return this;
-    };
+    this._updateAdsorbPoint(coordinate);
+    if (this.options['needCtrl'] !== domEvent.ctrlKey) {
+      delete this._adsorbPoint;
+    }
+  };
 
-    Autoadsorb.prototype.getMode = function getMode() {
-        return this.options['mode'];
-    };
+  Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
+    if (!this._needFindGeometry) return;
+    var availGeos = this._findGeometry(coordinate);
+  };
 
-    Autoadsorb.prototype.setDistance = function setDistance(distance) {
-        this.options['distance'] = distance;
-        this._updateGeosSet();
-        return this;
-    };
+  Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {};
 
-    Autoadsorb.prototype.getDistance = function getDistance() {
-        return this.options['distance'];
-    };
+  Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
+    var geos = this._getAllAssistGeos();
+    if (['auto', 'vertux'].includes(this.options['mode'])) {
+      this._geosSetPoint = this._parseToPoints(geos);
+    }
+    if (['auto', 'border'].includes(this.options['mode'])) {
+      this._geosSetLine = this._parseToLines(geos);
+    }
+  };
 
-    Autoadsorb.prototype.isEnable = function isEnable() {
-        return this._isEnable;
-    };
+  Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
+    return this._assistLayers.reduce(function (target, layer) {
+      return target.concat(layer.getGeometries());
+    }, []);
+  };
 
-    Autoadsorb.prototype.bindDrawTool = function bindDrawTool(drawTool) {
-        if (drawTool instanceof DrawTool) {
-            if (!this._map) this._addTo(drawTool.getMap());
-            this._drawTool = drawTool;
-            drawTool.on('enable', this._enable, this);
-            drawTool.on('disable remove', this._disable, this);
-            if (drawTool.isEnabled()) this._enable();
+  Autoadsorb.prototype._parseToPoints = function _parseToPoints(geos) {
+    var _this3 = this;
+
+    var points = [];
+    geos.forEach(function (geo) {
+      if (geo instanceof GeometryCollection) {
+        points = points.concat(explode(geo.toGeoJSON()).features);
+      } else {
+        if (geo instanceof Circle || geo instanceof Ellipse) {
+          geo = geo.copy();
+          var _geo = geo,
+              _options = _geo.options;
+
+          var shellPoints = _options['numberOfShellPoints'];
+          _options.numberOfShellPoints = Math.max(shellPoints, 360);
+          geo.setOptions(_options);
+          points.push(_this3._getCenterFeature(geo));
         }
-        return this;
-    };
+        points = points.concat(explode(geo.toGeoJSON()).features);
+      }
+    });
+    return points;
+  };
 
-    Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
-        if (geometry instanceof Geometry) {
-            if (!this._map) this._addTo(drawTool.getMap());
-            this._disableMapTool();
-            this._geometry = geometry;
-            this._geometryCoords = geometry.getCoordinates();
-            geometry.on('editstart', this._enable, this);
-            geometry.on('editend remove', this._disable, this);
-            if (geometry.isEditing()) this._enable();
+  Autoadsorb.prototype._getCenterFeature = function _getCenterFeature(geo) {
+    return {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: geo.getCenter().toArray() },
+      properties: {}
+    };
+  };
+
+  Autoadsorb.prototype._parseToLines = function _parseToLines(geos) {
+    var _this4 = this;
+
+    var lines = [];
+    geos = geos.filter(function (geo) {
+      return !(geo instanceof Marker || geo instanceof MultiPoint);
+    });
+    geos.forEach(function (geo) {
+      if (geo instanceof LineString) {
+        lines.push(geo.toGeoJSON());
+      } else if (geo instanceof MultiLineString) {
+        lines = lines.concat(flatten(geo.toGeoJSON()).features);
+      } else {
+        if (geo instanceof Circle || geo instanceof Ellipse) {
+          geo = geo.copy();
+          var _geo2 = geo,
+              _options2 = _geo2.options;
+
+          var shellPoints = _options2['numberOfShellPoints'];
+          _options2.numberOfShellPoints = Math.max(shellPoints, 360);
+          geo.setOptions(_options2);
         }
-        return this;
-    };
+        lines = lines.concat(_this4._polygonToLine(geo.toGeoJSON()));
+      }
+    });
+    return lines;
+  };
 
-    Autoadsorb.prototype.remove = function remove() {
-        this._disable();
-        if (this._cursorLayer) this._cursorLayer.remove();
-        delete this._cursorLayer;
-        delete this._assistLayers;
-        delete this._needDeal;
-        delete this._mousePoint;
-        delete this._cursor;
-        delete this._adsorbPoint;
-        delete this._drawTool;
-        delete this._map;
-    };
+  Autoadsorb.prototype._polygonToLine = function _polygonToLine(feature) {
+    var result = polygonToLine(feature);
+    if (result.type === 'Feature') return flatten(result).features;
+    return result.features.reduce(function (prev, cur) {
+      return prev.concat(flatten(cur).features);
+    }, []);
+  };
 
-    Autoadsorb.prototype._addTo = function _addTo(map) {
-        this._map = map;
-        this._newCursorLayer();
-        this._saveAdsorbLayers();
-    };
+  Autoadsorb.prototype._disable = function _disable() {
+    console.log('disable');
+    this._isEnable = false;
+    if (this._cursorLayer) this._cursorLayer.hide();
+    map.off('mousedown', this._mapMousedown, this);
+    map.off('mousemove', this._mapMousemove, this);
+    map.off('mouseup', this._mapMouseup, this);
+    this._resetGeosSet();
+    delete this._geometry;
+    delete this._geometryCoords;
+  };
 
-    Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
-        this._cursorLayer = new VectorLayer(cursorLayerName, {
-            style: { symbol: this.options['cursorSymbol'] }
-        });
-        this._cursorLayer.addTo(this._map).bringToFront();
-    };
+  Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {};
 
-    Autoadsorb.prototype._saveAdsorbLayers = function _saveAdsorbLayers() {
-        var _this2 = this;
+  Autoadsorb.prototype._disableMapTool = function _disableMapTool() {
+    if (this._map._map_tool) this._map._map_tool.disable();
+  };
 
-        this._assistLayers = [];
-        this.options['layers'].forEach(function (layer) {
-            if (typeof layer === 'string') {
-                layer = _this2._map.getLayer(layer);
-            }
-            if (layer instanceof VectorLayer) {
-                _this2._assistLayers.push(layer);
-            }
-        });
-    };
-
-    Autoadsorb.prototype._enable = function _enable() {
-        console.log('enable');
-        this._isEnable = true;
-        if (this._cursorLayer) this._cursorLayer.show();
-        map.on('mousedown', this._mapMousedown, this);
-        map.on('mouseup', this._mapMouseup, this);
-        map.on('mousemove', this._mapMousemove, this);
-        this._updateGeosSet();
-    };
-
-    Autoadsorb.prototype._mapMousedown = function _mapMousedown() {
-        this._needFindGeometry = !!this._geometry;
-    };
-
-    Autoadsorb.prototype._mapMouseup = function _mapMouseup() {
-        this._needFindGeometry = !this._geometry;
-    };
-
-    Autoadsorb.prototype._mapMousemove = function _mapMousemove(_ref) {
-        var coordinate = _ref.coordinate,
-            domEvent = _ref.domEvent;
-
-        this._needDeal = true;
-        this._mousePoint = coordinate;
-
-        if (this._cursor) {
-            this._cursor.setCoordinates(coordinate);
-        } else {
-            this._cursor = new Marker(coordinate);
-            this._cursor.addTo(this._cursorLayer);
-        }
-
-        this._updateAdsorbPoint(coordinate);
-        if (this.options['needCtrl'] !== domEvent.ctrlKey) {
-            delete this._adsorbPoint;
-        }
-    };
-
-    Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
-        if (!this._needFindGeometry) return;
-        var availGeos = this._findGeometry(coordinate);
-    };
-
-    Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {};
-
-    Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
-        var geos = this._getAllAssistGeos();
-        if (['auto', 'vertux'].includes(this.options['mode'])) {
-            this._geosSetPoint = this._parseToPoints(geos);
-        }
-        if (['auto', 'border'].includes(this.options['mode'])) {
-            this._geosSetLine = this._parseToLines(geos);
-        }
-    };
-
-    Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
-        return this._assistLayers.reduce(function (target, layer) {
-            return target.concat(layer.getGeometries());
-        }, []);
-    };
-
-    Autoadsorb.prototype._parseToPoints = function _parseToPoints(geos) {
-        var _this3 = this;
-
-        var points = [];
-        geos.forEach(function (geo) {
-            if (geo instanceof GeometryCollection) {
-                points = points.concat(explode(geo.toGeoJSON()).features);
-            } else {
-                if (geo instanceof Circle || geo instanceof Ellipse) {
-                    geo = geo.copy();
-                    var _geo = geo,
-                        _options = _geo.options;
-
-                    var shellPoints = _options['numberOfShellPoints'];
-                    _options.numberOfShellPoints = Math.max(shellPoints, 360);
-                    geo.setOptions(_options);
-                    points.push(_this3._getCenterFeature(geo));
-                }
-                points = points.concat(explode(geo.toGeoJSON()).features);
-            }
-        });
-        return points;
-    };
-
-    Autoadsorb.prototype._getCenterFeature = function _getCenterFeature(geo) {
-        return {
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: geo.getCenter().toArray() },
-            properties: {}
-        };
-    };
-
-    Autoadsorb.prototype._parseToLines = function _parseToLines(geos) {
-        var _this4 = this;
-
-        var lines = [];
-        geos = geos.filter(function (geo) {
-            return !(geo instanceof Marker || geo instanceof MultiPoint);
-        });
-        geos.forEach(function (geo) {
-            if (geo instanceof LineString) {
-                lines.push(geo.toGeoJSON());
-            } else if (geo instanceof MultiLineString) {
-                lines = lines.concat(flatten(geo.toGeoJSON()).features);
-            } else {
-                if (geo instanceof Circle || geo instanceof Ellipse) {
-                    geo = geo.copy();
-                    var _geo2 = geo,
-                        _options2 = _geo2.options;
-
-                    var shellPoints = _options2['numberOfShellPoints'];
-                    _options2.numberOfShellPoints = Math.max(shellPoints, 360);
-                    geo.setOptions(_options2);
-                }
-                lines = lines.concat(_this4._polygonToLine(geo.toGeoJSON()));
-            }
-        });
-        return lines;
-    };
-
-    Autoadsorb.prototype._polygonToLine = function _polygonToLine(feature) {
-        var result = polygonToLine(feature);
-        if (result.type === 'Feature') return flatten(result).features;
-        return result.features.reduce(function (prev, cur) {
-            return prev.concat(flatten(cur).features);
-        }, []);
-    };
-
-    Autoadsorb.prototype._disable = function _disable() {
-        console.log('disable');
-        this._isEnable = false;
-        if (this._cursorLayer) this._cursorLayer.hide();
-        map.off('mousedown', this._mapMousedown, this);
-        map.off('mousemove', this._mapMousemove, this);
-        map.off('mouseup', this._mapMouseup, this);
-        this._resetGeosSet();
-        delete this._geometry;
-        delete this._geometryCoords;
-    };
-
-    Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {};
-
-    Autoadsorb.prototype._disableMapTool = function _disableMapTool() {
-        if (this._map._map_tool) this._map._map_tool.disable();
-    };
-
-    return Autoadsorb;
+  return Autoadsorb;
 }(Class);
 
 Autoadsorb.mergeOptions(options);
