@@ -45,6 +45,7 @@ const drawTool = new maptalks.DrawTool({ mode: 'Point' }).addTo(map).disable()
 
 const autoAdsorb = new maptalks.Autoadsorb({
   layers: [layerSketch],
+  shellPoints: 360,
 }).bindDrawTool(drawTool)
 
 drawTool.on('drawend', (param) => {

@@ -1,12 +1,14 @@
 import explode from '@turf/explode'
 import flatten from '@turf/flatten'
 import polygonToLine from '@turf/polygon-to-line'
+import rbush from 'geojson-rbush'
 import * as maptalks from 'maptalks'
 
 const options = {
-  mode: 'auto',
   layers: [],
+  mode: 'auto',
   distance: 10,
+  shellPoints: 60,
   needCtrl: false,
   cursorSymbol: {
     markerType: 'ellipse',
@@ -23,6 +25,8 @@ export class Autoadsorb extends maptalks.Class {
   constructor(options) {
     super(options)
     this._isEnable = false
+    this._treePoints = rbush()
+    this._treeLines = rbush()
   }
 
   setMode(mode) {
@@ -76,10 +80,14 @@ export class Autoadsorb extends maptalks.Class {
   remove() {
     this._disable()
     if (this._cursorLayer) this._cursorLayer.remove()
+    delete this._needDeal
+    delete this._treePoints
+    delete this._treeLines
     delete this._cursorLayer
     delete this._assistLayers
-    delete this._needDeal
     delete this._mousePoint
+    delete this._geosSetPoint
+    delete this._geosSetLine
     delete this._cursor
     delete this._adsorbPoint
     delete this._drawTool
@@ -112,13 +120,12 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _enable() {
-    console.log('enable')
     this._isEnable = true
     if (this._cursorLayer) this._cursorLayer.show()
+    this._updateGeosSet()
     map.on('mousedown', this._mapMousedown, this)
     map.on('mouseup', this._mapMouseup, this)
     map.on('mousemove', this._mapMousemove, this)
-    this._updateGeosSet()
   }
 
   _mapMousedown() {
@@ -140,18 +147,70 @@ export class Autoadsorb extends maptalks.Class {
       this._cursor.addTo(this._cursorLayer)
     }
 
-    this._updateAdsorbPoint(coordinate)
-    if (this.options['needCtrl'] !== domEvent.ctrlKey) {
-      delete this._adsorbPoint
+    delete this._adsorbPoint
+    if (this.options['needCtrl'] === domEvent.ctrlKey) {
+      this._updateAdsorbPoint(coordinate)
     }
   }
 
   _updateAdsorbPoint(coordinate) {
     if (!this._needFindGeometry) return
     const availGeos = this._findGeometry(coordinate)
+    if (availGeos.length > 0) {
+      this._adsorbPoint = this._getAdsorbPoint(availGeos)
+    }
+    if (this._adsorbPoint) {
+      const { x, y } = this._adsorbPoint
+      this._cursor.setCoordinates([x, y])
+    }
   }
 
-  _findGeometry(coordinate) {}
+  _findGeometry(coordinate) {
+    let features = []
+    if (this._geosSetPoint.length > 0) {
+      const geos = this._findAvailGeos(this._treePoints, coordinate)
+      features = features.concat(geos)
+    }
+    if (this._geosSetLine.length > 0) {
+      const geos = this._findAvailGeos(this._treeLines, coordinate)
+      features = features.concat(geos)
+    }
+    return features
+  }
+
+  _findAvailGeos(tree, coordinate) {
+    const inspectExtent = this._createInspectExtent(coordinate)
+    const availGeos = tree.search(inspectExtent)
+    return availGeos.features
+  }
+
+  _createInspectExtent(coordinate) {
+    const radius = this._map.pixelToDistance(0, this.options['distance'])
+    const circle = new maptalks.Circle(coordinate, radius, {
+      properties: {},
+      numberOfShellPoints: this.options['shellPoints'],
+    })
+    return circle.toGeoJSON()
+  }
+
+  _getAdsorbPoint(features) {
+    const points = features.filter(
+      (feature) => feature.geometry.type === 'Point',
+    )
+    if (points.length > 0) return this._getNearestPoints(points)
+    const lines = features.filter(
+      (feature) => feature.geometry.type === 'LineString',
+    )
+    return this._getNearestPointsOnLine(lines)
+  }
+
+  _getNearestPoints(points) {
+    console.log('points', points.length)
+  }
+
+  _getNearestPointsOnLine(lines) {
+    console.log('lines', lines.length)
+  }
 
   _updateGeosSet() {
     const geos = this._getAllAssistGeos()
@@ -161,6 +220,7 @@ export class Autoadsorb extends maptalks.Class {
     if (['auto', 'border'].includes(this.options['mode'])) {
       this._geosSetLine = this._parseToLines(geos)
     }
+    this._updateRBushTree()
   }
 
   _getAllAssistGeos() {
@@ -178,10 +238,11 @@ export class Autoadsorb extends maptalks.Class {
       } else {
         if (geo instanceof maptalks.Circle || geo instanceof maptalks.Ellipse) {
           geo = geo.copy()
-          const { options } = geo
-          const shellPoints = options['numberOfShellPoints']
-          options.numberOfShellPoints = Math.max(shellPoints, 360)
-          geo.setOptions(options)
+          geo.setOptions(
+            Object.assign(geo.options || {}, {
+              numberOfShellPoints: this.options['shellPoints'],
+            }),
+          )
           points.push(this._getCenterFeature(geo))
         }
         points = points.concat(explode(geo.toGeoJSON()).features)
@@ -212,15 +273,16 @@ export class Autoadsorb extends maptalks.Class {
       } else {
         if (geo instanceof maptalks.Circle || geo instanceof maptalks.Ellipse) {
           geo = geo.copy()
-          const { options } = geo
-          const shellPoints = options['numberOfShellPoints']
-          options.numberOfShellPoints = Math.max(shellPoints, 360)
-          geo.setOptions(options)
+          geo.setOptions(
+            Object.assign(geo.options || {}, {
+              numberOfShellPoints: this.options['shellPoints'],
+            }),
+          )
         }
         lines = lines.concat(this._polygonToLine(geo.toGeoJSON()))
       }
     })
-    return lines
+    return this._splitLines(lines)
   }
 
   _polygonToLine(feature) {
@@ -232,8 +294,35 @@ export class Autoadsorb extends maptalks.Class {
     )
   }
 
+  _splitLines(lines) {
+    return lines.reduce((target, line) => {
+      const coords = line.geometry.coordinates
+      for (let i = 0; i < coords.length - 1; i++) {
+        const coordinates = [coords[i], coords[i + 1]]
+        target.push({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates },
+          properties: {},
+        })
+      }
+      return target
+    }, [])
+  }
+
+  _updateRBushTree() {
+    this._treePoints.clear()
+    this._treePoints.load({
+      type: 'FeatureCollection',
+      features: this._geosSetPoint,
+    })
+    this._treeLines.clear()
+    this._treeLines.load({
+      type: 'FeatureCollection',
+      features: this._geosSetLine,
+    })
+  }
+
   _disable() {
-    console.log('disable')
     this._isEnable = false
     if (this._cursorLayer) this._cursorLayer.hide()
     map.off('mousedown', this._mapMousedown, this)
