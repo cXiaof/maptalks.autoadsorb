@@ -8,10 +8,10 @@ Adsorb vertux/border/both of geos on layer When drawing or editing,inspired on [
 
 ## Install
 
--   Install with npm: `npm install maptalks.autoadsorb`.
--   Install with yarn: `yarn add maptalks.autoadsorb`.
--   Download from [dist directory](https://github.com/cXiaof/maptalks.autoadsorb/tree/master/dist).
--   Use unpkg CDN: `https://cdn.jsdelivr.net/npm/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js`
+- Install with npm: `npm install maptalks.autoadsorb`.
+- Install with yarn: `yarn add maptalks.autoadsorb`.
+- Download from [dist directory](https://github.com/cXiaof/maptalks.autoadsorb/tree/master/dist).
+- Use unpkg CDN: `https://cdn.jsdelivr.net/npm/maptalks.autoadsorb/dist/maptalks.autoadsorb.min.js`
 
 ## Usage
 
@@ -53,11 +53,11 @@ autoAdsorb.setAssistGeosLayer(['v1', 'v2'])
 new maptalks.Autoadsorb(options)
 ```
 
--   options **Object** options
-    -   mode **String** there are three modes, auto/vertux/border, auto by default.
-    -   distance **Number** the distance in pixel from mouse to the snap point, 10 by default.
-    -   needCtrl **Boolean** do adsorb only with Ctrl, default is false.
-    -   cursorSymbol **Object** adsorb cursor symbol(MarkerSymbol).
+- options **Object** options
+  - mode **String** there are three modes, auto/vertux/border, auto by default.
+  - distance **Number** the distance in pixel from mouse to the snap point, 10 by default.
+  - needCtrl **Boolean** do adsorb only with Ctrl, default is false.
+  - cursorSymbol **Object** adsorb cursor symbol(MarkerSymbol).
 
 `setLayer(layer)` specify a vectorlayer which drawing on.
 
@@ -99,25 +99,25 @@ It is written in ES6, transpiled by [babel](https://babeljs.io/) and tested with
 
 ### Scripts
 
--   Install dependencies
+- Install dependencies
 
 ```shell
 $ npm install
 ```
 
--   Watch source changes and generate runnable bundle repeatedly
+- Watch source changes and generate runnable bundle repeatedly
 
 ```shell
 $ gulp watch
 ```
 
--   Package and generate minified bundles to dist directory
+- Package and generate minified bundles to dist directory
 
 ```shell
 $ gulp minify
 ```
 
--   Lint
+- Lint
 
 ```shell
 $ npm run lint
@@ -125,10 +125,10 @@ $ npm run lint
 
 ## More Things
 
--   [maptalks.autoadsorb](https://github.com/cXiaof/maptalks.autoadsorb/issues)
--   [maptalks.multisuite](https://github.com/cXiaof/maptalks.multisuite/issues)
--   [maptalks.geosplit](https://github.com/cXiaof/maptalks.geosplit/issues)
--   [maptalks.polygonbool](https://github.com/cXiaof/maptalks.polygonbool/issues)
--   [maptalks.geo2img](https://github.com/cXiaof/maptalks.geo2img/issues)
--   [maptalks.control.compass](https://github.com/cXiaof/maptalks.control.compass/issues)
--   [maptalks.autogradual](https://github.com/cXiaof/maptalks.autogradual/issues)
+- [maptalks.autoadsorb](https://github.com/cXiaof/maptalks.autoadsorb/issues)
+- [maptalks.multisuite](https://github.com/cXiaof/maptalks.multisuite/issues)
+- [maptalks.geosplit](https://github.com/cXiaof/maptalks.geosplit/issues)
+- [maptalks.polygonbool](https://github.com/cXiaof/maptalks.polygonbool/issues)
+- [maptalks.geo2img](https://github.com/cXiaof/maptalks.geo2img/issues)
+- [maptalks.control.compass](https://github.com/cXiaof/maptalks.control.compass/issues)
+- [maptalks.autogradual](https://github.com/cXiaof/maptalks.autogradual/issues)

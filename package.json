@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@turf/explode": "^6.5.0",
+    "@turf/flatten": "^6.5.0",
     "@turf/polygon-to-line": "^6.5.0",
     "geojson-rbush": "^3.2.0",
     "lodash.differencewith": "^4.5.0",

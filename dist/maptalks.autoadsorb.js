@@ -204,7 +204,19 @@ function point(coordinates, properties, options) {
  * //=linestring1
  * //=linestring2
  */
-
+function lineString(coordinates, properties, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    if (coordinates.length < 2) {
+        throw new Error("coordinates must be an array of two or more positions");
+    }
+    var geom = {
+        type: "LineString",
+        coordinates: coordinates
+    };
+    return feature(geom, properties, options);
+}
 /**
  * Creates a {@link LineString} {@link FeatureCollection} from an Array of LineString coordinates.
  *
@@ -278,7 +290,16 @@ function featureCollection(features, options) {
  *
  * //=multiLine
  */
-
+function multiLineString(coordinates, properties, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = {
+        type: "MultiLineString",
+        coordinates: coordinates
+    };
+    return feature(geom, properties, options);
+}
 /**
  * Creates a {@link Feature<MultiPoint>} based on a
  * coordinate array. Properties can be added optionally.
@@ -667,6 +688,176 @@ function featureEach(geojson, callback) {
 }
 
 /**
+ * Callback for geomEach
+ *
+ * @callback geomEachCallback
+ * @param {Geometry} currentGeometry The current Geometry being processed.
+ * @param {number} featureIndex The current index of the Feature being processed.
+ * @param {Object} featureProperties The current Feature Properties being processed.
+ * @param {Array<number>} featureBBox The current Feature BBox being processed.
+ * @param {number|string} featureId The current Feature Id being processed.
+ */
+
+/**
+ * Iterate over each geometry in any GeoJSON object, similar to Array.forEach()
+ *
+ * @name geomEach
+ * @param {FeatureCollection|Feature|Geometry} geojson any GeoJSON object
+ * @param {Function} callback a method that takes (currentGeometry, featureIndex, featureProperties, featureBBox, featureId)
+ * @returns {void}
+ * @example
+ * var features = turf.featureCollection([
+ *     turf.point([26, 37], {foo: 'bar'}),
+ *     turf.point([36, 53], {hello: 'world'})
+ * ]);
+ *
+ * turf.geomEach(features, function (currentGeometry, featureIndex, featureProperties, featureBBox, featureId) {
+ *   //=currentGeometry
+ *   //=featureIndex
+ *   //=featureProperties
+ *   //=featureBBox
+ *   //=featureId
+ * });
+ */
+function geomEach(geojson, callback) {
+  var i,
+      j,
+      g,
+      geometry$$1,
+      stopG,
+      geometryMaybeCollection,
+      isGeometryCollection,
+      featureProperties,
+      featureBBox,
+      featureId,
+      featureIndex = 0,
+      isFeatureCollection = geojson.type === "FeatureCollection",
+      isFeature = geojson.type === "Feature",
+      stop = isFeatureCollection ? geojson.features.length : 1;
+
+  // This logic may look a little weird. The reason why it is that way
+  // is because it's trying to be fast. GeoJSON supports multiple kinds
+  // of objects at its root: FeatureCollection, Features, Geometries.
+  // This function has the responsibility of handling all of them, and that
+  // means that some of the `for` loops you see below actually just don't apply
+  // to certain inputs. For instance, if you give this just a
+  // Point geometry, then both loops are short-circuited and all we do
+  // is gradually rename the input until it's called 'geometry'.
+  //
+  // This also aims to allocate as few resources as possible: just a
+  // few numbers and booleans, rather than any temporary arrays as would
+  // be required with the normalization approach.
+  for (i = 0; i < stop; i++) {
+    geometryMaybeCollection = isFeatureCollection ? geojson.features[i].geometry : isFeature ? geojson.geometry : geojson;
+    featureProperties = isFeatureCollection ? geojson.features[i].properties : isFeature ? geojson.properties : {};
+    featureBBox = isFeatureCollection ? geojson.features[i].bbox : isFeature ? geojson.bbox : undefined;
+    featureId = isFeatureCollection ? geojson.features[i].id : isFeature ? geojson.id : undefined;
+    isGeometryCollection = geometryMaybeCollection ? geometryMaybeCollection.type === "GeometryCollection" : false;
+    stopG = isGeometryCollection ? geometryMaybeCollection.geometries.length : 1;
+
+    for (g = 0; g < stopG; g++) {
+      geometry$$1 = isGeometryCollection ? geometryMaybeCollection.geometries[g] : geometryMaybeCollection;
+
+      // Handle null Geometry
+      if (geometry$$1 === null) {
+        if (callback(null, featureIndex, featureProperties, featureBBox, featureId) === false) return false;
+        continue;
+      }
+      switch (geometry$$1.type) {
+        case "Point":
+        case "LineString":
+        case "MultiPoint":
+        case "Polygon":
+        case "MultiLineString":
+        case "MultiPolygon":
+          {
+            if (callback(geometry$$1, featureIndex, featureProperties, featureBBox, featureId) === false) return false;
+            break;
+          }
+        case "GeometryCollection":
+          {
+            for (j = 0; j < geometry$$1.geometries.length; j++) {
+              if (callback(geometry$$1.geometries[j], featureIndex, featureProperties, featureBBox, featureId) === false) return false;
+            }
+            break;
+          }
+        default:
+          throw new Error("Unknown Geometry Type");
+      }
+    }
+    // Only increase `featureIndex` per each feature
+    featureIndex++;
+  }
+}
+
+/**
+ * Callback for flattenEach
+ *
+ * @callback flattenEachCallback
+ * @param {Feature} currentFeature The current flattened feature being processed.
+ * @param {number} featureIndex The current index of the Feature being processed.
+ * @param {number} multiFeatureIndex The current index of the Multi-Feature being processed.
+ */
+
+/**
+ * Iterate over flattened features in any GeoJSON object, similar to
+ * Array.forEach.
+ *
+ * @name flattenEach
+ * @param {FeatureCollection|Feature|Geometry} geojson any GeoJSON object
+ * @param {Function} callback a method that takes (currentFeature, featureIndex, multiFeatureIndex)
+ * @example
+ * var features = turf.featureCollection([
+ *     turf.point([26, 37], {foo: 'bar'}),
+ *     turf.multiPoint([[40, 30], [36, 53]], {hello: 'world'})
+ * ]);
+ *
+ * turf.flattenEach(features, function (currentFeature, featureIndex, multiFeatureIndex) {
+ *   //=currentFeature
+ *   //=featureIndex
+ *   //=multiFeatureIndex
+ * });
+ */
+function flattenEach(geojson, callback) {
+  geomEach(geojson, function (geometry$$1, featureIndex, properties, bbox, id) {
+    // Callback for single geometry
+    var type = geometry$$1 === null ? null : geometry$$1.type;
+    switch (type) {
+      case null:
+      case "Point":
+      case "LineString":
+      case "Polygon":
+        if (callback(feature(geometry$$1, properties, { bbox: bbox, id: id }), featureIndex, 0) === false) return false;
+        return;
+    }
+
+    var geomType;
+
+    // Callback for multi-geometry
+    switch (type) {
+      case "MultiPoint":
+        geomType = "Point";
+        break;
+      case "MultiLineString":
+        geomType = "LineString";
+        break;
+      case "MultiPolygon":
+        geomType = "Polygon";
+        break;
+    }
+
+    for (var multiFeatureIndex = 0; multiFeatureIndex < geometry$$1.coordinates.length; multiFeatureIndex++) {
+      var coordinate = geometry$$1.coordinates[multiFeatureIndex];
+      var geom = {
+        type: geomType,
+        coordinates: coordinate
+      };
+      if (callback(feature(geom, properties), featureIndex, multiFeatureIndex) === false) return false;
+    }
+  });
+}
+
+/**
  * Takes a feature or set of features and returns all positions as {@link Point|points}.
  *
  * @name explode
@@ -781,7 +972,12 @@ function explode(geojson) {
  * var geom = turf.getGeom(point)
  * //={"type": "Point", "coordinates": [110, 40]}
  */
-
+function getGeom(geojson) {
+    if (geojson.type === "Feature") {
+        return geojson.geometry;
+    }
+    return geojson;
+}
 /**
  * Get GeoJSON object's type, Geometry type is prioritize.
  *
@@ -802,16 +998,104 @@ function explode(geojson) {
  */
 
 /**
- * @private
+ * Converts a {@link Polygon} to {@link LineString|(Multi)LineString} or {@link MultiPolygon} to a
+ * {@link FeatureCollection} of {@link LineString|(Multi)LineString}.
+ *
+ * @name polygonToLine
+ * @param {Feature<Polygon|MultiPolygon>} poly Feature to convert
+ * @param {Object} [options={}] Optional parameters
+ * @param {Object} [options.properties={}] translates GeoJSON properties to Feature
+ * @returns {FeatureCollection|Feature<LineString|MultiLinestring>} converted (Multi)Polygon to (Multi)LineString
+ * @example
+ * var poly = turf.polygon([[[125, -30], [145, -30], [145, -20], [125, -20], [125, -30]]]);
+ *
+ * var line = turf.polygonToLine(poly);
+ *
+ * //addToMap
+ * var addToMap = [line];
  */
-
+var polygonToLine = function (poly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(poly);
+    if (!options.properties && poly.type === "Feature") {
+        options.properties = poly.properties;
+    }
+    switch (geom.type) {
+        case "Polygon":
+            return polygonToLine$1(geom, options);
+        case "MultiPolygon":
+            return multiPolygonToLine(geom, options);
+        default:
+            throw new Error("invalid poly");
+    }
+};
 /**
  * @private
  */
-
+function polygonToLine$1(poly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(poly);
+    var coords = geom.coordinates;
+    var properties = options.properties ? options.properties : poly.type === "Feature" ? poly.properties : {};
+    return coordsToLine(coords, properties);
+}
 /**
  * @private
  */
+function multiPolygonToLine(multiPoly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(multiPoly);
+    var coords = geom.coordinates;
+    var properties = options.properties ? options.properties : multiPoly.type === "Feature" ? multiPoly.properties : {};
+    var lines = [];
+    coords.forEach(function (coord) {
+        lines.push(coordsToLine(coord, properties));
+    });
+    return featureCollection(lines);
+}
+/**
+ * @private
+ */
+function coordsToLine(coords, properties) {
+    if (coords.length > 1) {
+        return multiLineString(coords, properties);
+    }
+    return lineString(coords[0], properties);
+}
+
+/**
+ * Flattens any {@link GeoJSON} to a {@link FeatureCollection} inspired by [geojson-flatten](https://github.com/tmcw/geojson-flatten).
+ *
+ * @name flatten
+ * @param {GeoJSON} geojson any valid GeoJSON Object
+ * @returns {FeatureCollection<any>} all Multi-Geometries are flattened into single Features
+ * @example
+ * var multiGeometry = turf.multiPolygon([
+ *   [[[102.0, 2.0], [103.0, 2.0], [103.0, 3.0], [102.0, 3.0], [102.0, 2.0]]],
+ *   [[[100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0]],
+ *   [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8], [100.2, 0.8], [100.2, 0.2]]]
+ * ]);
+ *
+ * var flatten = turf.flatten(multiGeometry);
+ *
+ * //addToMap
+ * var addToMap = [flatten]
+ */
+function flatten(geojson) {
+  if (!geojson) throw new Error("geojson is required");
+
+  var results = [];
+  flattenEach(geojson, function (feature$$1) {
+    results.push(feature$$1);
+  });
+  return featureCollection(results);
+}
 
 function quickselectStep(arr, k, left, right, compare) {
 
@@ -6815,7 +7099,6 @@ var Autoadsorb = function (_maptalks$Class) {
         if (['auto', 'border'].includes(this.options['mode'])) {
             this._geosSetLine = this._parseToLines(geos);
         }
-        console.log(this._geosSetPoint);
     };
 
     Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
@@ -6857,7 +7140,39 @@ var Autoadsorb = function (_maptalks$Class) {
     };
 
     Autoadsorb.prototype._parseToLines = function _parseToLines(geos) {
-        return [];
+        var _this4 = this;
+
+        var lines = [];
+        geos = geos.filter(function (geo) {
+            return !(geo instanceof maptalks.Marker || geo instanceof maptalks.MultiPoint);
+        });
+        geos.forEach(function (geo) {
+            if (geo instanceof maptalks.LineString) {
+                lines.push(geo.toGeoJSON());
+            } else if (geo instanceof maptalks.MultiLineString) {
+                lines = lines.concat(flatten(geo.toGeoJSON()).features);
+            } else {
+                if (geo instanceof maptalks.Circle || geo instanceof maptalks.Ellipse) {
+                    geo = geo.copy();
+                    var _geo2 = geo,
+                        _options2 = _geo2.options;
+
+                    var shellPoints = _options2['numberOfShellPoints'];
+                    _options2.numberOfShellPoints = Math.max(shellPoints, 360);
+                    geo.setOptions(_options2);
+                }
+                lines = lines.concat(_this4._polygonToLine(geo.toGeoJSON()));
+            }
+        });
+        return lines;
+    };
+
+    Autoadsorb.prototype._polygonToLine = function _polygonToLine(feature) {
+        var result = polygonToLine(feature);
+        if (result.type === 'Feature') return flatten(result).features;
+        return result.features.reduce(function (prev, cur) {
+            return prev.concat(flatten(cur).features);
+        }, []);
     };
 
     Autoadsorb.prototype._disable = function _disable() {
