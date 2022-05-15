@@ -1,13 +1,7 @@
-import * as maptalks from 'maptalks'
 import explode from '@turf/explode'
-import polygonToLine from '@turf/polygon-to-line'
 import flatten from '@turf/flatten'
-import rbush from 'geojson-rbush'
-import isEqual from 'lodash.isequal'
-import differenceWith from 'lodash.differencewith'
-import findIndex from 'lodash.findindex'
-import includes from 'lodash.includes'
-import flattenDeep from 'lodash.flattendeep'
+import polygonToLine from '@turf/polygon-to-line'
+import * as maptalks from 'maptalks'
 
 const options = {
   mode: 'auto',
