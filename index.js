@@ -244,7 +244,10 @@ export class Autoadsorb extends maptalks.Class {
     delete this._geometryCoords
   }
 
-  _resetGeosSet() {}
+  _resetGeosSet() {
+    this._geosSetPoint = []
+    this._geosSetLine = []
+  }
 
   _disableMapTool() {
     if (this._map._map_tool) this._map._map_tool.disable()

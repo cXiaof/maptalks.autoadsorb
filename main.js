@@ -1,10 +1,10 @@
-import * as maptalks from 'maptalks'
 import rbush from 'geojson-rbush'
-import isEqual from 'lodash.isequal'
 import differenceWith from 'lodash.differencewith'
 import findIndex from 'lodash.findindex'
-import includes from 'lodash.includes'
 import flattenDeep from 'lodash.flattendeep'
+import includes from 'lodash.includes'
+import isEqual from 'lodash.isequal'
+import * as maptalks from 'maptalks'
 
 const options = {
   mode: 'auto',
