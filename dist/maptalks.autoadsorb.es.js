@@ -747,7 +747,7 @@ function validateId(id) {
     }
 }
 
-var es$1 = Object.freeze({
+var es = Object.freeze({
 	earthRadius: earthRadius,
 	factors: factors,
 	unitsFactors: unitsFactors,
@@ -1886,7 +1886,7 @@ function findPoint(geojson, options) {
 
 
 
-var es = Object.freeze({
+var es$1 = Object.freeze({
 	coordAll: coordAll,
 	coordEach: coordEach,
 	coordReduce: coordReduce,
@@ -1905,6 +1905,80 @@ var es = Object.freeze({
 	segmentEach: segmentEach,
 	segmentReduce: segmentReduce
 });
+
+/**
+ * Combines a {@link FeatureCollection} of {@link Point}, {@link LineString}, or {@link Polygon} features
+ * into {@link MultiPoint}, {@link MultiLineString}, or {@link MultiPolygon} features.
+ *
+ * @name combine
+ * @param {FeatureCollection<Point|LineString|Polygon>} fc a FeatureCollection of any type
+ * @returns {FeatureCollection<MultiPoint|MultiLineString|MultiPolygon>} a FeatureCollection of corresponding type to input
+ * @example
+ * var fc = turf.featureCollection([
+ *   turf.point([19.026432, 47.49134]),
+ *   turf.point([19.074497, 47.509548])
+ * ]);
+ *
+ * var combined = turf.combine(fc);
+ *
+ * //addToMap
+ * var addToMap = [combined]
+ */
+function combine(fc) {
+    var groups = {
+        MultiPoint: {
+            coordinates: [],
+            properties: []
+        },
+        MultiLineString: {
+            coordinates: [],
+            properties: []
+        },
+        MultiPolygon: {
+            coordinates: [],
+            properties: []
+        }
+    };
+    featureEach(fc, function (feature$$1) {
+        var _a, _b, _c;
+        var _d;
+        switch ((_d = feature$$1.geometry) === null || _d === void 0 ? void 0 : _d.type) {
+            case "Point":
+                groups.MultiPoint.coordinates.push(feature$$1.geometry.coordinates);
+                groups.MultiPoint.properties.push(feature$$1.properties);
+                break;
+            case "MultiPoint":
+                (_a = groups.MultiPoint.coordinates).push.apply(_a, feature$$1.geometry.coordinates);
+                groups.MultiPoint.properties.push(feature$$1.properties);
+                break;
+            case "LineString":
+                groups.MultiLineString.coordinates.push(feature$$1.geometry.coordinates);
+                groups.MultiLineString.properties.push(feature$$1.properties);
+                break;
+            case "MultiLineString":
+                (_b = groups.MultiLineString.coordinates).push.apply(_b, feature$$1.geometry.coordinates);
+                groups.MultiLineString.properties.push(feature$$1.properties);
+                break;
+            case "Polygon":
+                groups.MultiPolygon.coordinates.push(feature$$1.geometry.coordinates);
+                groups.MultiPolygon.properties.push(feature$$1.properties);
+                break;
+            case "MultiPolygon":
+                (_c = groups.MultiPolygon.coordinates).push.apply(_c, feature$$1.geometry.coordinates);
+                groups.MultiPolygon.properties.push(feature$$1.properties);
+                break;
+            default:
+                break;
+        }
+    });
+    return featureCollection(Object.keys(groups).filter(function (key) {
+        return groups[key].coordinates.length;
+    }).sort().map(function (key) {
+        var geometry$$1 = { type: key, coordinates: groups[key].coordinates };
+        var properties = { collectedProperties: groups[key].properties };
+        return feature(geometry$$1, properties);
+    }));
+}
 
 /**
  * Takes a feature or set of features and returns all positions as {@link Point|points}.
@@ -1965,6 +2039,162 @@ function flatten(geojson) {
   return featureCollection(results);
 }
 
+var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+/**
+ * Returns a cloned copy of the passed GeoJSON Object, including possible 'Foreign Members'.
+ * ~3-5x faster than the common JSON.parse + JSON.stringify combo method.
+ *
+ * @name clone
+ * @param {GeoJSON} geojson GeoJSON Object
+ * @returns {GeoJSON} cloned GeoJSON Object
+ * @example
+ * var line = turf.lineString([[-74, 40], [-78, 42], [-82, 35]], {color: 'red'});
+ *
+ * var lineCloned = turf.clone(line);
+ */
+function clone(geojson) {
+    if (!geojson) {
+        throw new Error("geojson is required");
+    }
+    switch (geojson.type) {
+        case "Feature":
+            return cloneFeature(geojson);
+        case "FeatureCollection":
+            return cloneFeatureCollection(geojson);
+        case "Point":
+        case "LineString":
+        case "Polygon":
+        case "MultiPoint":
+        case "MultiLineString":
+        case "MultiPolygon":
+        case "GeometryCollection":
+            return cloneGeometry(geojson);
+        default:
+            throw new Error("unknown GeoJSON type");
+    }
+}
+/**
+ * Clone Feature
+ *
+ * @private
+ * @param {Feature<any>} geojson GeoJSON Feature
+ * @returns {Feature<any>} cloned Feature
+ */
+function cloneFeature(geojson) {
+    var cloned = { type: "Feature" };
+    // Preserve Foreign Members
+    Object.keys(geojson).forEach(function (key) {
+        switch (key) {
+            case "type":
+            case "properties":
+            case "geometry":
+                return;
+            default:
+                cloned[key] = geojson[key];
+        }
+    });
+    // Add properties & geometry last
+    cloned.properties = cloneProperties(geojson.properties);
+    cloned.geometry = cloneGeometry(geojson.geometry);
+    return cloned;
+}
+/**
+ * Clone Properties
+ *
+ * @private
+ * @param {Object} properties GeoJSON Properties
+ * @returns {Object} cloned Properties
+ */
+function cloneProperties(properties) {
+    var cloned = {};
+    if (!properties) {
+        return cloned;
+    }
+    Object.keys(properties).forEach(function (key) {
+        var value = properties[key];
+        if ((typeof value === "undefined" ? "undefined" : _typeof$1(value)) === "object") {
+            if (value === null) {
+                // handle null
+                cloned[key] = null;
+            } else if (Array.isArray(value)) {
+                // handle Array
+                cloned[key] = value.map(function (item) {
+                    return item;
+                });
+            } else {
+                // handle generic Object
+                cloned[key] = cloneProperties(value);
+            }
+        } else {
+            cloned[key] = value;
+        }
+    });
+    return cloned;
+}
+/**
+ * Clone Feature Collection
+ *
+ * @private
+ * @param {FeatureCollection<any>} geojson GeoJSON Feature Collection
+ * @returns {FeatureCollection<any>} cloned Feature Collection
+ */
+function cloneFeatureCollection(geojson) {
+    var cloned = { type: "FeatureCollection" };
+    // Preserve Foreign Members
+    Object.keys(geojson).forEach(function (key) {
+        switch (key) {
+            case "type":
+            case "features":
+                return;
+            default:
+                cloned[key] = geojson[key];
+        }
+    });
+    // Add features
+    cloned.features = geojson.features.map(function (feature) {
+        return cloneFeature(feature);
+    });
+    return cloned;
+}
+/**
+ * Clone Geometry
+ *
+ * @private
+ * @param {Geometry<any>} geometry GeoJSON Geometry
+ * @returns {Geometry<any>} cloned Geometry
+ */
+function cloneGeometry(geometry) {
+    var geom = { type: geometry.type };
+    if (geometry.bbox) {
+        geom.bbox = geometry.bbox;
+    }
+    if (geometry.type === "GeometryCollection") {
+        geom.geometries = geometry.geometries.map(function (g) {
+            return cloneGeometry(g);
+        });
+        return geom;
+    }
+    geom.coordinates = deepSlice(geometry.coordinates);
+    return geom;
+}
+/**
+ * Deep Slice coordinates
+ *
+ * @private
+ * @param {Coordinates} coords Coordinates
+ * @returns {Coordinates} all coordinates sliced
+ */
+function deepSlice(coords) {
+    var cloned = coords;
+    if (_typeof$1(cloned[0]) !== "object") {
+        return cloned.slice();
+    }
+    return cloned.map(function (coord) {
+        return deepSlice(coord);
+    });
+}
+
 /**
  * Unwrap a coordinate from a Point Feature, Geometry or a single coordinate.
  *
@@ -1977,7 +2207,23 @@ function flatten(geojson) {
  * var coord = turf.getCoord(pt);
  * //= [10, 10]
  */
-
+function getCoord(coord) {
+    if (!coord) {
+        throw new Error("coord is required");
+    }
+    if (!Array.isArray(coord)) {
+        if (coord.type === "Feature" && coord.geometry !== null && coord.geometry.type === "Point") {
+            return coord.geometry.coordinates;
+        }
+        if (coord.type === "Point") {
+            return coord.coordinates;
+        }
+    }
+    if (Array.isArray(coord) && coord.length >= 2 && !Array.isArray(coord[0]) && !Array.isArray(coord[1])) {
+        return coord;
+    }
+    throw new Error("coord must be GeoJSON Point or an Array of numbers");
+}
 /**
  * Unwrap coordinates from a Feature, Geometry Object or an Array
  *
@@ -1990,7 +2236,23 @@ function flatten(geojson) {
  * var coords = turf.getCoords(poly);
  * //= [[[119.32, -8.7], [119.55, -8.69], [119.51, -8.54], [119.32, -8.7]]]
  */
-
+function getCoords(coords) {
+    if (Array.isArray(coords)) {
+        return coords;
+    }
+    // Feature
+    if (coords.type === "Feature") {
+        if (coords.geometry !== null) {
+            return coords.geometry.coordinates;
+        }
+    } else {
+        // Geometry
+        if (coords.coordinates) {
+            return coords.coordinates;
+        }
+    }
+    throw new Error("coords must be GeoJSON Feature, Geometry Object or an Array");
+}
 /**
  * Checks if coordinates contains a number
  *
@@ -2074,76 +2336,279 @@ function getGeom(geojson) {
  * //="Point"
  */
 
+//http://en.wikipedia.org/wiki/Haversine_formula
+//http://www.movable-type.co.uk/scripts/latlong.html
 /**
- * Converts a {@link Polygon} to {@link LineString|(Multi)LineString} or {@link MultiPolygon} to a
- * {@link FeatureCollection} of {@link LineString|(Multi)LineString}.
+ * Calculates the distance between two {@link Point|points} in degrees, radians, miles, or kilometers.
+ * This uses the [Haversine formula](http://en.wikipedia.org/wiki/Haversine_formula) to account for global curvature.
  *
- * @name polygonToLine
- * @param {Feature<Polygon|MultiPolygon>} poly Feature to convert
+ * @name distance
+ * @param {Coord | Point} from origin point or coordinate
+ * @param {Coord | Point} to destination point or coordinate
  * @param {Object} [options={}] Optional parameters
- * @param {Object} [options.properties={}] translates GeoJSON properties to Feature
- * @returns {FeatureCollection|Feature<LineString|MultiLinestring>} converted (Multi)Polygon to (Multi)LineString
+ * @param {string} [options.units='kilometers'] can be degrees, radians, miles, or kilometers
+ * @returns {number} distance between the two points
  * @example
- * var poly = turf.polygon([[[125, -30], [145, -30], [145, -20], [125, -20], [125, -30]]]);
+ * var from = turf.point([-75.343, 39.984]);
+ * var to = turf.point([-75.534, 39.123]);
+ * var options = {units: 'miles'};
  *
- * var line = turf.polygonToLine(poly);
+ * var distance = turf.distance(from, to, options);
  *
  * //addToMap
- * var addToMap = [line];
+ * var addToMap = [from, to];
+ * from.properties.distance = distance;
+ * to.properties.distance = distance;
  */
-var polygonToLine = function (poly, options) {
+function distance(from, to, options) {
     if (options === void 0) {
         options = {};
     }
-    var geom = getGeom(poly);
-    if (!options.properties && poly.type === "Feature") {
-        options.properties = poly.properties;
-    }
-    switch (geom.type) {
-        case "Polygon":
-            return polygonToLine$1(geom, options);
-        case "MultiPolygon":
-            return multiPolygonToLine(geom, options);
-        default:
-            throw new Error("invalid poly");
-    }
-};
-/**
- * @private
- */
-function polygonToLine$1(poly, options) {
-    if (options === void 0) {
-        options = {};
-    }
-    var geom = getGeom(poly);
-    var coords = geom.coordinates;
-    var properties = options.properties ? options.properties : poly.type === "Feature" ? poly.properties : {};
-    return coordsToLine(coords, properties);
+    var coordinates1 = getCoord(from);
+    var coordinates2 = getCoord(to);
+    var dLat = degreesToRadians(coordinates2[1] - coordinates1[1]);
+    var dLon = degreesToRadians(coordinates2[0] - coordinates1[0]);
+    var lat1 = degreesToRadians(coordinates1[1]);
+    var lat2 = degreesToRadians(coordinates2[1]);
+    var a = Math.pow(Math.sin(dLat / 2), 2) + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+    return radiansToLength(2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)), options.units);
 }
+
 /**
- * @private
+ * Takes a reference {@link Point|point} and a FeatureCollection of Features
+ * with Point geometries and returns the
+ * point from the FeatureCollection closest to the reference. This calculation
+ * is geodesic.
+ *
+ * @name nearestPoint
+ * @param {Coord} targetPoint the reference point
+ * @param {FeatureCollection<Point>} points against input point set
+ * @returns {Feature<Point>} the closest point in the set to the reference point
+ * @example
+ * var targetPoint = turf.point([28.965797, 41.010086], {"marker-color": "#0F0"});
+ * var points = turf.featureCollection([
+ *     turf.point([28.973865, 41.011122]),
+ *     turf.point([28.948459, 41.024204]),
+ *     turf.point([28.938674, 41.013324])
+ * ]);
+ *
+ * var nearest = turf.nearestPoint(targetPoint, points);
+ *
+ * //addToMap
+ * var addToMap = [targetPoint, points, nearest];
+ * nearest.properties['marker-color'] = '#F00';
  */
-function multiPolygonToLine(multiPoly, options) {
-    if (options === void 0) {
-        options = {};
-    }
-    var geom = getGeom(multiPoly);
-    var coords = geom.coordinates;
-    var properties = options.properties ? options.properties : multiPoly.type === "Feature" ? multiPoly.properties : {};
-    var lines = [];
-    coords.forEach(function (coord) {
-        lines.push(coordsToLine(coord, properties));
+function nearestPoint(targetPoint, points) {
+    // Input validation
+    if (!targetPoint) throw new Error("targetPoint is required");
+    if (!points) throw new Error("points is required");
+    var nearest;
+    var minDist = Infinity;
+    var bestFeatureIndex = 0;
+    featureEach(points, function (pt, featureIndex) {
+        var distanceToPoint = distance(targetPoint, pt);
+        if (distanceToPoint < minDist) {
+            bestFeatureIndex = featureIndex;
+            minDist = distanceToPoint;
+        }
     });
-    return featureCollection(lines);
+    nearest = clone(points.features[bestFeatureIndex]);
+    nearest.properties.featureIndex = bestFeatureIndex;
+    nearest.properties.distanceToPoint = minDist;
+    return nearest;
+}
+
+// http://en.wikipedia.org/wiki/Haversine_formula
+// http://www.movable-type.co.uk/scripts/latlong.html
+/**
+ * Takes two {@link Point|points} and finds the geographic bearing between them,
+ * i.e. the angle measured in degrees from the north line (0 degrees)
+ *
+ * @name bearing
+ * @param {Coord} start starting Point
+ * @param {Coord} end ending Point
+ * @param {Object} [options={}] Optional parameters
+ * @param {boolean} [options.final=false] calculates the final bearing if true
+ * @returns {number} bearing in decimal degrees, between -180 and 180 degrees (positive clockwise)
+ * @example
+ * var point1 = turf.point([-75.343, 39.984]);
+ * var point2 = turf.point([-75.534, 39.123]);
+ *
+ * var bearing = turf.bearing(point1, point2);
+ *
+ * //addToMap
+ * var addToMap = [point1, point2]
+ * point1.properties['marker-color'] = '#f00'
+ * point2.properties['marker-color'] = '#0f0'
+ * point1.properties.bearing = bearing
+ */
+function bearing(start, end, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    // Reverse calculation
+    if (options.final === true) {
+        return calculateFinalBearing(start, end);
+    }
+    var coordinates1 = getCoord(start);
+    var coordinates2 = getCoord(end);
+    var lon1 = degreesToRadians(coordinates1[0]);
+    var lon2 = degreesToRadians(coordinates2[0]);
+    var lat1 = degreesToRadians(coordinates1[1]);
+    var lat2 = degreesToRadians(coordinates2[1]);
+    var a = Math.sin(lon2 - lon1) * Math.cos(lat2);
+    var b = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+    return radiansToDegrees(Math.atan2(a, b));
 }
 /**
+ * Calculates Final Bearing
+ *
  * @private
+ * @param {Coord} start starting Point
+ * @param {Coord} end ending Point
+ * @returns {number} bearing
  */
-function coordsToLine(coords, properties) {
-    if (coords.length > 1) {
-        return multiLineString(coords, properties);
+function calculateFinalBearing(start, end) {
+    // Swap start & end
+    var bear = bearing(end, start);
+    bear = (bear + 180) % 360;
+    return bear;
+}
+
+// http://en.wikipedia.org/wiki/Haversine_formula
+// http://www.movable-type.co.uk/scripts/latlong.html
+/**
+ * Takes a {@link Point} and calculates the location of a destination point given a distance in
+ * degrees, radians, miles, or kilometers; and bearing in degrees.
+ * This uses the [Haversine formula](http://en.wikipedia.org/wiki/Haversine_formula) to account for global curvature.
+ *
+ * @name destination
+ * @param {Coord} origin starting point
+ * @param {number} distance distance from the origin point
+ * @param {number} bearing ranging from -180 to 180
+ * @param {Object} [options={}] Optional parameters
+ * @param {string} [options.units='kilometers'] miles, kilometers, degrees, or radians
+ * @param {Object} [options.properties={}] Translate properties to Point
+ * @returns {Feature<Point>} destination point
+ * @example
+ * var point = turf.point([-75.343, 39.984]);
+ * var distance = 50;
+ * var bearing = 90;
+ * var options = {units: 'miles'};
+ *
+ * var destination = turf.destination(point, distance, bearing, options);
+ *
+ * //addToMap
+ * var addToMap = [point, destination]
+ * destination.properties['marker-color'] = '#f00';
+ * point.properties['marker-color'] = '#0f0';
+ */
+function destination(origin, distance, bearing, options) {
+    if (options === void 0) {
+        options = {};
     }
-    return lineString(coords[0], properties);
+    // Handle input
+    var coordinates1 = getCoord(origin);
+    var longitude1 = degreesToRadians(coordinates1[0]);
+    var latitude1 = degreesToRadians(coordinates1[1]);
+    var bearingRad = degreesToRadians(bearing);
+    var radians = lengthToRadians(distance, options.units);
+    // Main
+    var latitude2 = Math.asin(Math.sin(latitude1) * Math.cos(radians) + Math.cos(latitude1) * Math.sin(radians) * Math.cos(bearingRad));
+    var longitude2 = longitude1 + Math.atan2(Math.sin(bearingRad) * Math.sin(radians) * Math.cos(latitude1), Math.cos(radians) - Math.sin(latitude1) * Math.sin(latitude2));
+    var lng = radiansToDegrees(longitude2);
+    var lat = radiansToDegrees(latitude2);
+    return point([lng, lat], options.properties);
+}
+
+/**
+ * Creates a {@link FeatureCollection} of 2-vertex {@link LineString} segments from a
+ * {@link LineString|(Multi)LineString} or {@link Polygon|(Multi)Polygon}.
+ *
+ * @name lineSegment
+ * @param {GeoJSON} geojson GeoJSON Polygon or LineString
+ * @returns {FeatureCollection<LineString>} 2-vertex line segments
+ * @example
+ * var polygon = turf.polygon([[[-50, 5], [-40, -10], [-50, -10], [-40, 5], [-50, 5]]]);
+ * var segments = turf.lineSegment(polygon);
+ *
+ * //addToMap
+ * var addToMap = [polygon, segments]
+ */
+function lineSegment(geojson) {
+    if (!geojson) {
+        throw new Error("geojson is required");
+    }
+    var results = [];
+    flattenEach(geojson, function (feature$$1) {
+        lineSegmentFeature(feature$$1, results);
+    });
+    return featureCollection(results);
+}
+/**
+ * Line Segment
+ *
+ * @private
+ * @param {Feature<LineString|Polygon>} geojson Line or polygon feature
+ * @param {Array} results push to results
+ * @returns {void}
+ */
+function lineSegmentFeature(geojson, results) {
+    var coords = [];
+    var geometry$$1 = geojson.geometry;
+    if (geometry$$1 !== null) {
+        switch (geometry$$1.type) {
+            case "Polygon":
+                coords = getCoords(geometry$$1);
+                break;
+            case "LineString":
+                coords = [getCoords(geometry$$1)];
+        }
+        coords.forEach(function (coord) {
+            var segments = createSegments(coord, geojson.properties);
+            segments.forEach(function (segment) {
+                segment.id = results.length;
+                results.push(segment);
+            });
+        });
+    }
+}
+/**
+ * Create Segments from LineString coordinates
+ *
+ * @private
+ * @param {Array<Array<number>>} coords LineString coordinates
+ * @param {*} properties GeoJSON properties
+ * @returns {Array<Feature<LineString>>} line segments
+ */
+function createSegments(coords, properties) {
+    var segments = [];
+    coords.reduce(function (previousCoords, currentCoords) {
+        var segment = lineString([previousCoords, currentCoords], properties);
+        segment.bbox = bbox(previousCoords, currentCoords);
+        segments.push(segment);
+        return currentCoords;
+    });
+    return segments;
+}
+/**
+ * Create BBox between two coordinates (faster than @turf/bbox)
+ *
+ * @private
+ * @param {Array<number>} coords1 Point coordinate
+ * @param {Array<number>} coords2 Point coordinate
+ * @returns {BBox} [west, south, east, north]
+ */
+function bbox(coords1, coords2) {
+    var x1 = coords1[0];
+    var y1 = coords1[1];
+    var x2 = coords2[0];
+    var y2 = coords2[1];
+    var west = x1 < x2 ? x1 : x2;
+    var south = y1 < y2 ? y1 : y2;
+    var east = x1 > x2 ? x1 : x2;
+    var north = y1 > y2 ? y1 : y2;
+    return [west, south, east, north];
 }
 
 function quickselect(arr, k, left, right, compare) {
@@ -2224,7 +2689,7 @@ var RBush = function () {
         var node = this.data;
         var result = [];
 
-        if (!intersects(bbox, node)) return result;
+        if (!intersects$1(bbox, node)) return result;
 
         var toBBox = this.toBBox;
         var nodesToSearch = [];
@@ -2234,7 +2699,7 @@ var RBush = function () {
                 var child = node.children[i];
                 var childBBox = node.leaf ? toBBox(child) : child;
 
-                if (intersects(bbox, childBBox)) {
+                if (intersects$1(bbox, childBBox)) {
                     if (node.leaf) result.push(child);else if (contains(bbox, childBBox)) this._all(child, result);else nodesToSearch.push(child);
                 }
             }
@@ -2247,7 +2712,7 @@ var RBush = function () {
     RBush.prototype.collides = function collides(bbox) {
         var node = this.data;
 
-        if (!intersects(bbox, node)) return false;
+        if (!intersects$1(bbox, node)) return false;
 
         var nodesToSearch = [];
         while (node) {
@@ -2255,7 +2720,7 @@ var RBush = function () {
                 var child = node.children[i];
                 var childBBox = node.leaf ? this.toBBox(child) : child;
 
-                if (intersects(bbox, childBBox)) {
+                if (intersects$1(bbox, childBBox)) {
                     if (node.leaf || contains(bbox, childBBox)) return true;
                     nodesToSearch.push(child);
                 }
@@ -2695,7 +3160,7 @@ function contains(a, b) {
     return a.minX <= b.minX && a.minY <= b.minY && b.maxX <= a.maxX && b.maxY <= a.maxY;
 }
 
-function intersects(a, b) {
+function intersects$1(a, b) {
     return b.minX <= a.maxX && b.minY <= a.maxY && b.maxX >= a.minX && b.maxY >= a.minY;
 }
 
@@ -2748,7 +3213,7 @@ var rbush$1 = Object.freeze({
  * //addToMap
  * var addToMap = [line, bboxPolygon]
  */
-function bbox(geojson) {
+function bbox$1(geojson) {
     var result = [Infinity, Infinity, -Infinity, -Infinity];
     coordEach(geojson, function (coord) {
         if (result[0] > coord[0]) {
@@ -2766,20 +3231,20 @@ function bbox(geojson) {
     });
     return result;
 }
-bbox["default"] = bbox;
+bbox$1["default"] = bbox$1;
 
 
 var es$2 = Object.freeze({
-	default: bbox
+	default: bbox$1
 });
 
 var rbush$2 = ( rbush$1 && RBush ) || rbush$1;
 
-var require$$0 = ( es$2 && bbox ) || es$2;
+var require$$0 = ( es$2 && bbox$1 ) || es$2;
 
 var turfBBox = require$$0.default;
-var featureEach$1 = es.featureEach;
-var featureCollection$1 = es$1.featureCollection;
+var featureEach$1 = es$1.featureEach;
+var featureCollection$1 = es.featureCollection;
 
 /**
  * GeoJSON implementation of [RBush](https://github.com/mourner/rbush#rbush) spatial index.
@@ -2977,6 +3442,251 @@ var geojsonRbush_1 = geojsonRbush;
 var default_1 = geojsonRbush;
 
 geojsonRbush_1.default = default_1;
+
+/**
+ * Takes any LineString or Polygon GeoJSON and returns the intersecting point(s).
+ *
+ * @name lineIntersect
+ * @param {GeoJSON} line1 any LineString or Polygon
+ * @param {GeoJSON} line2 any LineString or Polygon
+ * @returns {FeatureCollection<Point>} point(s) that intersect both
+ * @example
+ * var line1 = turf.lineString([[126, -11], [129, -21]]);
+ * var line2 = turf.lineString([[123, -18], [131, -14]]);
+ * var intersects = turf.lineIntersect(line1, line2);
+ *
+ * //addToMap
+ * var addToMap = [line1, line2, intersects]
+ */
+function lineIntersect(line1, line2) {
+    var unique = {};
+    var results = [];
+    // First, normalize geometries to features
+    // Then, handle simple 2-vertex segments
+    if (line1.type === "LineString") {
+        line1 = feature(line1);
+    }
+    if (line2.type === "LineString") {
+        line2 = feature(line2);
+    }
+    if (line1.type === "Feature" && line2.type === "Feature" && line1.geometry !== null && line2.geometry !== null && line1.geometry.type === "LineString" && line2.geometry.type === "LineString" && line1.geometry.coordinates.length === 2 && line2.geometry.coordinates.length === 2) {
+        var intersect = intersects(line1, line2);
+        if (intersect) {
+            results.push(intersect);
+        }
+        return featureCollection(results);
+    }
+    // Handles complex GeoJSON Geometries
+    var tree = geojsonRbush_1();
+    tree.load(lineSegment(line2));
+    featureEach(lineSegment(line1), function (segment) {
+        featureEach(tree.search(segment), function (match) {
+            var intersect = intersects(segment, match);
+            if (intersect) {
+                // prevent duplicate points https://github.com/Turfjs/turf/issues/688
+                var key = getCoords(intersect).join(",");
+                if (!unique[key]) {
+                    unique[key] = true;
+                    results.push(intersect);
+                }
+            }
+        });
+    });
+    return featureCollection(results);
+}
+/**
+ * Find a point that intersects LineStrings with two coordinates each
+ *
+ * @private
+ * @param {Feature<LineString>} line1 GeoJSON LineString (Must only contain 2 coordinates)
+ * @param {Feature<LineString>} line2 GeoJSON LineString (Must only contain 2 coordinates)
+ * @returns {Feature<Point>} intersecting GeoJSON Point
+ */
+function intersects(line1, line2) {
+    var coords1 = getCoords(line1);
+    var coords2 = getCoords(line2);
+    if (coords1.length !== 2) {
+        throw new Error("<intersects> line1 must only contain 2 coordinates");
+    }
+    if (coords2.length !== 2) {
+        throw new Error("<intersects> line2 must only contain 2 coordinates");
+    }
+    var x1 = coords1[0][0];
+    var y1 = coords1[0][1];
+    var x2 = coords1[1][0];
+    var y2 = coords1[1][1];
+    var x3 = coords2[0][0];
+    var y3 = coords2[0][1];
+    var x4 = coords2[1][0];
+    var y4 = coords2[1][1];
+    var denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+    var numeA = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+    var numeB = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
+    if (denom === 0) {
+        if (numeA === 0 && numeB === 0) {
+            return null;
+        }
+        return null;
+    }
+    var uA = numeA / denom;
+    var uB = numeB / denom;
+    if (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1) {
+        var x = x1 + uA * (x2 - x1);
+        var y = y1 + uA * (y2 - y1);
+        return point([x, y]);
+    }
+    return null;
+}
+
+/**
+ * Takes a {@link Point} and a {@link LineString} and calculates the closest Point on the (Multi)LineString.
+ *
+ * @name nearestPointOnLine
+ * @param {Geometry|Feature<LineString|MultiLineString>} lines lines to snap to
+ * @param {Geometry|Feature<Point>|number[]} pt point to snap from
+ * @param {Object} [options={}] Optional parameters
+ * @param {string} [options.units='kilometers'] can be degrees, radians, miles, or kilometers
+ * @returns {Feature<Point>} closest point on the `line` to `point`. The properties object will contain three values: `index`: closest point was found on nth line part, `dist`: distance between pt and the closest point, `location`: distance along the line between start and the closest point.
+ * @example
+ * var line = turf.lineString([
+ *     [-77.031669, 38.878605],
+ *     [-77.029609, 38.881946],
+ *     [-77.020339, 38.884084],
+ *     [-77.025661, 38.885821],
+ *     [-77.021884, 38.889563],
+ *     [-77.019824, 38.892368]
+ * ]);
+ * var pt = turf.point([-77.037076, 38.884017]);
+ *
+ * var snapped = turf.nearestPointOnLine(line, pt, {units: 'miles'});
+ *
+ * //addToMap
+ * var addToMap = [line, pt, snapped];
+ * snapped.properties['marker-color'] = '#00f';
+ */
+function nearestPointOnLine(lines, pt, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var closestPt = point([Infinity, Infinity], {
+        dist: Infinity
+    });
+    var length = 0.0;
+    flattenEach(lines, function (line) {
+        var coords = getCoords(line);
+        for (var i = 0; i < coords.length - 1; i++) {
+            //start
+            var start = point(coords[i]);
+            start.properties.dist = distance(pt, start, options);
+            //stop
+            var stop_1 = point(coords[i + 1]);
+            stop_1.properties.dist = distance(pt, stop_1, options);
+            // sectionLength
+            var sectionLength = distance(start, stop_1, options);
+            //perpendicular
+            var heightDistance = Math.max(start.properties.dist, stop_1.properties.dist);
+            var direction = bearing(start, stop_1);
+            var perpendicularPt1 = destination(pt, heightDistance, direction + 90, options);
+            var perpendicularPt2 = destination(pt, heightDistance, direction - 90, options);
+            var intersect = lineIntersect(lineString([perpendicularPt1.geometry.coordinates, perpendicularPt2.geometry.coordinates]), lineString([start.geometry.coordinates, stop_1.geometry.coordinates]));
+            var intersectPt = null;
+            if (intersect.features.length > 0) {
+                intersectPt = intersect.features[0];
+                intersectPt.properties.dist = distance(pt, intersectPt, options);
+                intersectPt.properties.location = length + distance(start, intersectPt, options);
+            }
+            if (start.properties.dist < closestPt.properties.dist) {
+                closestPt = start;
+                closestPt.properties.index = i;
+                closestPt.properties.location = length;
+            }
+            if (stop_1.properties.dist < closestPt.properties.dist) {
+                closestPt = stop_1;
+                closestPt.properties.index = i + 1;
+                closestPt.properties.location = length + sectionLength;
+            }
+            if (intersectPt && intersectPt.properties.dist < closestPt.properties.dist) {
+                closestPt = intersectPt;
+                closestPt.properties.index = i;
+            }
+            // update length
+            length += sectionLength;
+        }
+    });
+    return closestPt;
+}
+
+/**
+ * Converts a {@link Polygon} to {@link LineString|(Multi)LineString} or {@link MultiPolygon} to a
+ * {@link FeatureCollection} of {@link LineString|(Multi)LineString}.
+ *
+ * @name polygonToLine
+ * @param {Feature<Polygon|MultiPolygon>} poly Feature to convert
+ * @param {Object} [options={}] Optional parameters
+ * @param {Object} [options.properties={}] translates GeoJSON properties to Feature
+ * @returns {FeatureCollection|Feature<LineString|MultiLinestring>} converted (Multi)Polygon to (Multi)LineString
+ * @example
+ * var poly = turf.polygon([[[125, -30], [145, -30], [145, -20], [125, -20], [125, -30]]]);
+ *
+ * var line = turf.polygonToLine(poly);
+ *
+ * //addToMap
+ * var addToMap = [line];
+ */
+var polygonToLine = function (poly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(poly);
+    if (!options.properties && poly.type === "Feature") {
+        options.properties = poly.properties;
+    }
+    switch (geom.type) {
+        case "Polygon":
+            return polygonToLine$1(geom, options);
+        case "MultiPolygon":
+            return multiPolygonToLine(geom, options);
+        default:
+            throw new Error("invalid poly");
+    }
+};
+/**
+ * @private
+ */
+function polygonToLine$1(poly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(poly);
+    var coords = geom.coordinates;
+    var properties = options.properties ? options.properties : poly.type === "Feature" ? poly.properties : {};
+    return coordsToLine(coords, properties);
+}
+/**
+ * @private
+ */
+function multiPolygonToLine(multiPoly, options) {
+    if (options === void 0) {
+        options = {};
+    }
+    var geom = getGeom(multiPoly);
+    var coords = geom.coordinates;
+    var properties = options.properties ? options.properties : multiPoly.type === "Feature" ? multiPoly.properties : {};
+    var lines = [];
+    coords.forEach(function (coord) {
+        lines.push(coordsToLine(coord, properties));
+    });
+    return featureCollection(lines);
+}
+/**
+ * @private
+ */
+function coordsToLine(coords, properties) {
+    if (coords.length > 1) {
+        return multiLineString(coords, properties);
+    }
+    return lineString(coords[0], properties);
+}
 
 function _defaults(obj, defaults) { var keys = Object.getOwnPropertyNames(defaults); for (var i = 0; i < keys.length; i++) { var key = keys[i]; var value = Object.getOwnPropertyDescriptor(defaults, key); if (value && value.configurable && obj[key] === undefined) { Object.defineProperty(obj, key, value); } } return obj; }
 
@@ -3190,25 +3900,39 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._getAdsorbPoint = function _getAdsorbPoint(features) {
+    var nearestFeature = void 0;
+    var mousePoint = [this._mousePoint.x, this._mousePoint.y];
     var points = features.filter(function (feature) {
       return feature.geometry.type === 'Point';
     });
-    if (points.length > 0) return this._getNearestPoints(points);
-    var lines = features.filter(function (feature) {
-      return feature.geometry.type === 'LineString';
-    });
-    return this._getNearestPointsOnLine(lines);
+    if (points.length > 0) {
+      nearestFeature = this._getNearestPoint(mousePoint, points);
+    } else {
+      var lines = features.filter(function (feature) {
+        return feature.geometry.type === 'LineString';
+      });
+      nearestFeature = this._getNearestPointOnLine(mousePoint, lines);
+    }
+    var _nearestFeature$geome = nearestFeature.geometry.coordinates,
+        x = _nearestFeature$geome[0],
+        y = _nearestFeature$geome[1];
+
+    return { x: x, y: y };
   };
 
-  Autoadsorb.prototype._getNearestPoints = function _getNearestPoints(points) {
-    console.log('points', points.length);
+  Autoadsorb.prototype._getNearestPoint = function _getNearestPoint(mousePoint, features) {
+    return nearestPoint(mousePoint, { type: 'FeatureCollection', features: features });
   };
 
-  Autoadsorb.prototype._getNearestPointsOnLine = function _getNearestPointsOnLine(lines) {
-    console.log('lines', lines.length);
+  Autoadsorb.prototype._getNearestPointOnLine = function _getNearestPointOnLine(mousePoint, features) {
+    var multiLines = combine({ type: 'FeatureCollection', features: features });
+    return nearestPointOnLine(multiLines, mousePoint);
   };
 
   Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
+    this._geosSetPoint = [];
+    this._geosSetLine = [];
+
     var geos = this._getAllAssistGeos();
     if (['auto', 'vertux'].includes(this.options['mode'])) {
       this._geosSetPoint = this._parseToPoints(geos);
@@ -3216,6 +3940,7 @@ var Autoadsorb = function (_maptalks$Class) {
     if (['auto', 'border'].includes(this.options['mode'])) {
       this._geosSetLine = this._parseToLines(geos);
     }
+
     this._updateRBushTree();
   };
 

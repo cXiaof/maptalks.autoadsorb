@@ -1,5 +1,8 @@
+import combine from '@turf/combine'
 import explode from '@turf/explode'
 import flatten from '@turf/flatten'
+import nearestPoint from '@turf/nearest-point'
+import nearestPointOnLine from '@turf/nearest-point-on-line'
 import polygonToLine from '@turf/polygon-to-line'
 import rbush from 'geojson-rbush'
 import * as maptalks from 'maptalks'
@@ -194,25 +197,36 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _getAdsorbPoint(features) {
+    let nearestFeature
+    const mousePoint = [this._mousePoint.x, this._mousePoint.y]
     const points = features.filter(
       (feature) => feature.geometry.type === 'Point',
     )
-    if (points.length > 0) return this._getNearestPoints(points)
-    const lines = features.filter(
-      (feature) => feature.geometry.type === 'LineString',
-    )
-    return this._getNearestPointsOnLine(lines)
+    if (points.length > 0) {
+      nearestFeature = this._getNearestPoint(mousePoint, points)
+    } else {
+      const lines = features.filter(
+        (feature) => feature.geometry.type === 'LineString',
+      )
+      nearestFeature = this._getNearestPointOnLine(mousePoint, lines)
+    }
+    const [x, y] = nearestFeature.geometry.coordinates
+    return { x, y }
   }
 
-  _getNearestPoints(points) {
-    console.log('points', points.length)
+  _getNearestPoint(mousePoint, features) {
+    return nearestPoint(mousePoint, { type: 'FeatureCollection', features })
   }
 
-  _getNearestPointsOnLine(lines) {
-    console.log('lines', lines.length)
+  _getNearestPointOnLine(mousePoint, features) {
+    const multiLines = combine({ type: 'FeatureCollection', features })
+    return nearestPointOnLine(multiLines, mousePoint)
   }
 
   _updateGeosSet() {
+    this._geosSetPoint = []
+    this._geosSetLine = []
+
     const geos = this._getAllAssistGeos()
     if (['auto', 'vertux'].includes(this.options['mode'])) {
       this._geosSetPoint = this._parseToPoints(geos)
@@ -220,6 +234,7 @@ export class Autoadsorb extends maptalks.Class {
     if (['auto', 'border'].includes(this.options['mode'])) {
       this._geosSetLine = this._parseToLines(geos)
     }
+
     this._updateRBushTree()
   }
 
