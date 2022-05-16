@@ -4078,16 +4078,21 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
-    var _geometry$_editor$_sh;
-
-    if (!this._handledragging || !this._adsorbPoint) return;
+    if (!this._adsorbPoint) return;
     var geometry = e.target;
-    var center = geometry.getCenter();
-    var point = this._adsorbPoint;
-    var offset = this._getCoordsOffset(center, point);
-    geometry.translate.apply(geometry, offset);
-    (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
-    delete this._handledragging;
+    if (geometry instanceof maptalks.Marker) {
+      geometry.setCoordinates(this._adsorbPoint);
+    } else {
+      var _geometry$_editor$_sh;
+
+      if (!this._handledragging) return;
+      var center = geometry.getCenter();
+      var point = this._adsorbPoint;
+      var offset = this._getCoordsOffset(center, point);
+      geometry.translate.apply(geometry, offset);
+      (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
+      delete this._handledragging;
+    }
   };
 
   Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {

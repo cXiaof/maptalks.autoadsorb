@@ -373,14 +373,19 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _resetShadowCenter(e) {
-    if (!this._handledragging || !this._adsorbPoint) return
+    if (!this._adsorbPoint) return
     const geometry = e.target
-    const center = geometry.getCenter()
-    const point = this._adsorbPoint
-    const offset = this._getCoordsOffset(center, point)
-    geometry.translate(...offset)
-    geometry._editor._shadow.translate(...offset)
-    delete this._handledragging
+    if (geometry instanceof maptalks.Marker) {
+      geometry.setCoordinates(this._adsorbPoint)
+    } else {
+      if (!this._handledragging) return
+      const center = geometry.getCenter()
+      const point = this._adsorbPoint
+      const offset = this._getCoordsOffset(center, point)
+      geometry.translate(...offset)
+      geometry._editor._shadow.translate(...offset)
+      delete this._handledragging
+    }
   }
 
   _registerDrawToolEvents() {
