@@ -4089,10 +4089,18 @@ var Autoadsorb = function (_maptalks$Class) {
         geo.setCoordinates(coords);
         break;
       case 'Circle':
+        if (e.type === 'drawstart') {
+          geo.setCoordinates(this._adsorbPoint);
+          return;
+        }
         var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
         geo.setRadius(radius);
         break;
       case 'Ellipse':
+        if (e.type === 'drawstart') {
+          geo.setCoordinates(this._adsorbPoint);
+          return;
+        }
         var width = this._map.getProjection().measureLength([coords, { x: x, y: coords.y }]);
         var height = this._map.getProjection().measureLength([coords, { x: coords.x, y: y }]);
         geo.setWidth(width * 2).setHeight(height * 2)._updateCache();

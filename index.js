@@ -383,12 +383,20 @@ export class Autoadsorb extends maptalks.Class {
         geo.setCoordinates(coords)
         break
       case 'Circle':
+        if (e.type === 'drawstart') {
+          geo.setCoordinates(this._adsorbPoint)
+          return
+        }
         const radius = this._map
           .getProjection()
           .measureLength([coords, this._adsorbPoint])
         geo.setRadius(radius)
         break
       case 'Ellipse':
+        if (e.type === 'drawstart') {
+          geo.setCoordinates(this._adsorbPoint)
+          return
+        }
         const width = this._map
           .getProjection()
           .measureLength([coords, { x, y: coords.y }])
