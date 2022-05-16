@@ -52,6 +52,11 @@ export class Autoadsorb extends maptalks.Class {
     return this.options['distance']
   }
 
+  refreshTargets() {
+    this._updateGeosSet()
+    return this
+  }
+
   isEnable() {
     return this._isEnable
   }
@@ -348,14 +353,75 @@ export class Autoadsorb extends maptalks.Class {
 
   _registerGeometryEvents() {}
 
-  _registerDrawToolEvents() {}
+  _registerDrawToolEvents() {
+    this._drawTool.on('drawstart drawvertex', this._resetCoordsAndPoint, this)
+    this._drawTool.on('mousemove drawend', this._resetCoordinates, this)
+  }
+
+  _resetCoordsAndPoint(e) {
+    this._resetCoordinates(e)
+    this._resetClickPoint(e)
+  }
+
+  _resetCoordinates(e) {
+    if (!this._adsorbPoint) return
+    const {
+      options: { mode },
+      _geometry: geo,
+    } = e.target
+    const coords = geo.getCoordinates()
+    const { x, y } = this._adsorbPoint
+    switch (mode) {
+      case 'Point':
+        geo.setCoordinates(this._adsorbPoint)
+        break
+      case 'Rectangle':
+        coords[0][1].x = x
+        coords[0][2].x = x
+        coords[0][2].y = y
+        coords[0][3].y = y
+        geo.setCoordinates(coords)
+        break
+      case 'Circle':
+        const radius = this._map
+          .getProjection()
+          .measureLength([coords, this._adsorbPoint])
+        geo.setRadius(radius)
+        break
+      case 'Ellipse':
+        const width = this._map
+          .getProjection()
+          .measureLength([coords, { x, y: coords.y }])
+        const height = this._map
+          .getProjection()
+          .measureLength([coords, { x: coords.x, y }])
+        geo
+          .setWidth(width * 2)
+          .setHeight(height * 2)
+          ._updateCache()
+        break
+      default:
+        coords.pop()
+        coords.push(this._adsorbPoint)
+        geo.setCoordinates(coords)
+        break
+    }
+  }
+
+  _resetClickPoint(e) {
+    if (!this._adsorbPoint) return
+    const clickCoords = e.target._clickCoords
+    const point = this._map.coordToPoint(this._adsorbPoint)
+    clickCoords.pop()
+    clickCoords.push(this._map._pointToPrj(point))
+  }
 
   _disable() {
     this._isEnable = false
     if (this._cursorLayer) this._cursorLayer.hide()
     this._offMapEvents()
-    this._offDrawToolEvents()
     this._offGeometryEvents()
+    this._offDrawToolEvents()
     this._resetGeosSet()
     delete this._geometry
     delete this._geometryCoords
@@ -365,6 +431,13 @@ export class Autoadsorb extends maptalks.Class {
     this._map.off('mousedown', this._mapMousedown, this)
     this._map.off('mousemove', this._mapMousemove, this)
     this._map.off('mouseup', this._mapMouseup, this)
+  }
+
+  _offGeometryEvents() {}
+
+  _offDrawToolEvents() {
+    this._drawTool.off('drawstart drawvertex', this._resetCoordsAndPoint, this)
+    this._drawTool.off('mousemove drawend', this._resetCoordinates, this)
   }
 
   _resetGeosSet() {

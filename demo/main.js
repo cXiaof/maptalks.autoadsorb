@@ -51,6 +51,7 @@ const autoAdsorb = new maptalks.Autoadsorb({
 drawTool.on('drawend', (param) => {
   const { geometry } = param
   geometry.addTo(layerSketch)
+  autoAdsorb.refreshTargets()
   geometry.on('contextmenu', () => {
     if (geometry.isEditing()) {
       geometry.endEdit()

@@ -3751,6 +3751,11 @@ var Autoadsorb = function (_maptalks$Class) {
     return this.options['distance'];
   };
 
+  Autoadsorb.prototype.refreshTargets = function refreshTargets() {
+    this._updateGeosSet();
+    return this;
+  };
+
   Autoadsorb.prototype.isEnable = function isEnable() {
     return this._isEnable;
   };
@@ -4055,14 +4060,69 @@ var Autoadsorb = function (_maptalks$Class) {
 
   Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {};
 
-  Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {};
+  Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
+    this._drawTool.on('drawstart drawvertex', this._resetCoordsAndPoint, this);
+    this._drawTool.on('mousemove drawend', this._resetCoordinates, this);
+  };
+
+  Autoadsorb.prototype._resetCoordsAndPoint = function _resetCoordsAndPoint(e) {
+    this._resetCoordinates(e);
+    this._resetClickPoint(e);
+  };
+
+  Autoadsorb.prototype._resetCoordinates = function _resetCoordinates(e) {
+    if (!this._adsorbPoint) return;
+    var _e$target = e.target,
+        mode = _e$target.options.mode,
+        geo = _e$target._geometry;
+
+    var coords = geo.getCoordinates();
+    var _adsorbPoint2 = this._adsorbPoint,
+        x = _adsorbPoint2.x,
+        y = _adsorbPoint2.y;
+
+    switch (mode) {
+      case 'Point':
+        geo.setCoordinates(this._adsorbPoint);
+        break;
+      case 'Rectangle':
+        coords[0][1].x = x;
+        coords[0][2].x = x;
+        coords[0][2].y = y;
+        coords[0][3].y = y;
+        geo.setCoordinates(coords);
+        break;
+      case 'Circle':
+        var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
+        geo.setRadius(radius);
+        break;
+      case 'Ellipse':
+        var width = this._map.getProjection().measureLength([coords, { x: x, y: coords.y }]);
+        var height = this._map.getProjection().measureLength([coords, { x: coords.x, y: y }]);
+        geo.setWidth(width * 2).setHeight(height * 2)._updateCache();
+        break;
+      default:
+        coords.pop();
+        coords.push(this._adsorbPoint);
+        geo.setCoordinates(coords);
+        break;
+    }
+  };
+
+  Autoadsorb.prototype._resetClickPoint = function _resetClickPoint(e) {
+    if (!this._adsorbPoint) return;
+    var clickCoords = e.target._clickCoords;
+    var point = this._map.coordToPoint(this._adsorbPoint);
+    clickCoords.pop();
+    clickCoords.push(this._map._pointToPrj(point));
+  };
 
   Autoadsorb.prototype._disable = function _disable() {
     this._isEnable = false;
     if (this._cursorLayer) this._cursorLayer.hide();
     this._offMapEvents();
-    this._offDrawToolEvents();
     this._offGeometryEvents();
+    this._offDrawToolEvents();
     this._resetGeosSet();
     delete this._geometry;
     delete this._geometryCoords;
@@ -4072,6 +4132,13 @@ var Autoadsorb = function (_maptalks$Class) {
     this._map.off('mousedown', this._mapMousedown, this);
     this._map.off('mousemove', this._mapMousemove, this);
     this._map.off('mouseup', this._mapMouseup, this);
+  };
+
+  Autoadsorb.prototype._offGeometryEvents = function _offGeometryEvents() {};
+
+  Autoadsorb.prototype._offDrawToolEvents = function _offDrawToolEvents() {
+    this._drawTool.off('drawstart drawvertex', this._resetCoordsAndPoint, this);
+    this._drawTool.off('mousemove drawend', this._resetCoordinates, this);
   };
 
   Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {
