@@ -3823,110 +3823,12 @@ var Autoadsorb = function (_maptalks$Class) {
     this._isEnable = true;
     if (this._cursorLayer) this._cursorLayer.show();
     this._updateGeosSet();
-    map.on('mousedown', this._mapMousedown, this);
-    map.on('mouseup', this._mapMouseup, this);
-    map.on('mousemove', this._mapMousemove, this);
-  };
-
-  Autoadsorb.prototype._mapMousedown = function _mapMousedown() {
-    this._needFindGeometry = !!this._geometry;
-  };
-
-  Autoadsorb.prototype._mapMouseup = function _mapMouseup() {
-    this._needFindGeometry = !this._geometry;
-  };
-
-  Autoadsorb.prototype._mapMousemove = function _mapMousemove(_ref) {
-    var coordinate = _ref.coordinate,
-        domEvent = _ref.domEvent;
-
-    this._needDeal = true;
-    this._mousePoint = coordinate;
-
-    if (this._cursor) {
-      this._cursor.setCoordinates(coordinate);
+    this._registerMapEvents();
+    if (this.geometry) {
+      this._registerGeometryEvents();
     } else {
-      this._cursor = new Marker(coordinate);
-      this._cursor.addTo(this._cursorLayer);
+      this._registerDrawToolEvents();
     }
-
-    delete this._adsorbPoint;
-    if (this.options['needCtrl'] === domEvent.ctrlKey) {
-      this._updateAdsorbPoint(coordinate);
-    }
-  };
-
-  Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
-    if (!this._needFindGeometry) return;
-    var availGeos = this._findGeometry(coordinate);
-    if (availGeos.length > 0) {
-      this._adsorbPoint = this._getAdsorbPoint(availGeos);
-    }
-    if (this._adsorbPoint) {
-      var _adsorbPoint = this._adsorbPoint,
-          x = _adsorbPoint.x,
-          y = _adsorbPoint.y;
-
-      this._cursor.setCoordinates([x, y]);
-    }
-  };
-
-  Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {
-    var features = [];
-    if (this._geosSetPoint.length > 0) {
-      var geos = this._findAvailGeos(this._treePoints, coordinate);
-      features = features.concat(geos);
-    }
-    if (this._geosSetLine.length > 0) {
-      var _geos = this._findAvailGeos(this._treeLines, coordinate);
-      features = features.concat(_geos);
-    }
-    return features;
-  };
-
-  Autoadsorb.prototype._findAvailGeos = function _findAvailGeos(tree, coordinate) {
-    var inspectExtent = this._createInspectExtent(coordinate);
-    var availGeos = tree.search(inspectExtent);
-    return availGeos.features;
-  };
-
-  Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
-    var radius = this._map.pixelToDistance(0, this.options['distance']);
-    var circle = new Circle(coordinate, radius, {
-      properties: {},
-      numberOfShellPoints: this.options['shellPoints']
-    });
-    return circle.toGeoJSON();
-  };
-
-  Autoadsorb.prototype._getAdsorbPoint = function _getAdsorbPoint(features) {
-    var nearestFeature = void 0;
-    var mousePoint = [this._mousePoint.x, this._mousePoint.y];
-    var points = features.filter(function (feature) {
-      return feature.geometry.type === 'Point';
-    });
-    if (points.length > 0) {
-      nearestFeature = this._getNearestPoint(mousePoint, points);
-    } else {
-      var lines = features.filter(function (feature) {
-        return feature.geometry.type === 'LineString';
-      });
-      nearestFeature = this._getNearestPointOnLine(mousePoint, lines);
-    }
-    var _nearestFeature$geome = nearestFeature.geometry.coordinates,
-        x = _nearestFeature$geome[0],
-        y = _nearestFeature$geome[1];
-
-    return { x: x, y: y };
-  };
-
-  Autoadsorb.prototype._getNearestPoint = function _getNearestPoint(mousePoint, features) {
-    return nearestPoint(mousePoint, { type: 'FeatureCollection', features: features });
-  };
-
-  Autoadsorb.prototype._getNearestPointOnLine = function _getNearestPointOnLine(mousePoint, features) {
-    var multiLines = combine({ type: 'FeatureCollection', features: features });
-    return nearestPointOnLine(multiLines, mousePoint);
   };
 
   Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
@@ -4040,15 +3942,132 @@ var Autoadsorb = function (_maptalks$Class) {
     });
   };
 
+  Autoadsorb.prototype._registerMapEvents = function _registerMapEvents() {
+    this._map.on('mousedown', this._mapMousedown, this);
+    this._map.on('mouseup', this._mapMouseup, this);
+    this._map.on('mousemove', this._mapMousemove, this);
+  };
+
+  Autoadsorb.prototype._mapMousedown = function _mapMousedown() {
+    this._needFindGeometry = !!this._geometry;
+  };
+
+  Autoadsorb.prototype._mapMouseup = function _mapMouseup() {
+    this._needFindGeometry = !this._geometry;
+  };
+
+  Autoadsorb.prototype._mapMousemove = function _mapMousemove(_ref) {
+    var coordinate = _ref.coordinate,
+        domEvent = _ref.domEvent;
+
+    this._needDeal = true;
+    this._mousePoint = coordinate;
+
+    if (this._cursor) {
+      this._cursor.setCoordinates(coordinate);
+    } else {
+      this._cursor = new Marker(coordinate);
+      this._cursor.addTo(this._cursorLayer);
+    }
+
+    delete this._adsorbPoint;
+    if (this.options['needCtrl'] === domEvent.ctrlKey) {
+      this._updateAdsorbPoint(coordinate);
+    }
+  };
+
+  Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
+    if (!this._needFindGeometry) return;
+    var availGeos = this._findGeometry(coordinate);
+    if (availGeos.length > 0) {
+      this._adsorbPoint = this._getAdsorbPoint(availGeos);
+    }
+    if (this._adsorbPoint) {
+      var _adsorbPoint = this._adsorbPoint,
+          x = _adsorbPoint.x,
+          y = _adsorbPoint.y;
+
+      this._cursor.setCoordinates([x, y]);
+    }
+  };
+
+  Autoadsorb.prototype._findGeometry = function _findGeometry(coordinate) {
+    var features = [];
+    if (this._geosSetPoint.length > 0) {
+      var geos = this._findAvailGeos(this._treePoints, coordinate);
+      features = features.concat(geos);
+    }
+    if (this._geosSetLine.length > 0) {
+      var _geos = this._findAvailGeos(this._treeLines, coordinate);
+      features = features.concat(_geos);
+    }
+    return features;
+  };
+
+  Autoadsorb.prototype._findAvailGeos = function _findAvailGeos(tree, coordinate) {
+    var inspectExtent = this._createInspectExtent(coordinate);
+    var availGeos = tree.search(inspectExtent);
+    return availGeos.features;
+  };
+
+  Autoadsorb.prototype._createInspectExtent = function _createInspectExtent(coordinate) {
+    var radius = this._map.pixelToDistance(0, this.options['distance']);
+    var circle = new Circle(coordinate, radius, {
+      properties: {},
+      numberOfShellPoints: this.options['shellPoints']
+    });
+    return circle.toGeoJSON();
+  };
+
+  Autoadsorb.prototype._getAdsorbPoint = function _getAdsorbPoint(features) {
+    var nearestFeature = void 0;
+    var mousePoint = [this._mousePoint.x, this._mousePoint.y];
+    var points = features.filter(function (feature) {
+      return feature.geometry.type === 'Point';
+    });
+    if (points.length > 0) {
+      nearestFeature = this._getNearestPoint(mousePoint, points);
+    } else {
+      var lines = features.filter(function (feature) {
+        return feature.geometry.type === 'LineString';
+      });
+      nearestFeature = this._getNearestPointOnLine(mousePoint, lines);
+    }
+    var _nearestFeature$geome = nearestFeature.geometry.coordinates,
+        x = _nearestFeature$geome[0],
+        y = _nearestFeature$geome[1];
+
+    return { x: x, y: y };
+  };
+
+  Autoadsorb.prototype._getNearestPoint = function _getNearestPoint(mousePoint, features) {
+    return nearestPoint(mousePoint, { type: 'FeatureCollection', features: features });
+  };
+
+  Autoadsorb.prototype._getNearestPointOnLine = function _getNearestPointOnLine(mousePoint, features) {
+    var multiLines = combine({ type: 'FeatureCollection', features: features });
+    return nearestPointOnLine(multiLines, mousePoint);
+  };
+
+  Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {};
+
+  Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {};
+
   Autoadsorb.prototype._disable = function _disable() {
     this._isEnable = false;
     if (this._cursorLayer) this._cursorLayer.hide();
-    map.off('mousedown', this._mapMousedown, this);
-    map.off('mousemove', this._mapMousemove, this);
-    map.off('mouseup', this._mapMouseup, this);
+    this._offMapEvents();
+    this._offDrawToolEvents();
+    this._offGeometryEvents();
     this._resetGeosSet();
     delete this._geometry;
     delete this._geometryCoords;
+  };
+
+  Autoadsorb.prototype._offMapEvents = function _offMapEvents() {
+    this._map.off('mousedown', this._mapMousedown, this);
+    this._map.off('mousemove', this._mapMousemove, this);
+    this._map.off('mouseup', this._mapMouseup, this);
   };
 
   Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {

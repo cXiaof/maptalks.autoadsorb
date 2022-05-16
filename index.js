@@ -126,101 +126,12 @@ export class Autoadsorb extends maptalks.Class {
     this._isEnable = true
     if (this._cursorLayer) this._cursorLayer.show()
     this._updateGeosSet()
-    map.on('mousedown', this._mapMousedown, this)
-    map.on('mouseup', this._mapMouseup, this)
-    map.on('mousemove', this._mapMousemove, this)
-  }
-
-  _mapMousedown() {
-    this._needFindGeometry = !!this._geometry
-  }
-
-  _mapMouseup() {
-    this._needFindGeometry = !this._geometry
-  }
-
-  _mapMousemove({ coordinate, domEvent }) {
-    this._needDeal = true
-    this._mousePoint = coordinate
-
-    if (this._cursor) {
-      this._cursor.setCoordinates(coordinate)
+    this._registerMapEvents()
+    if (this.geometry) {
+      this._registerGeometryEvents()
     } else {
-      this._cursor = new maptalks.Marker(coordinate)
-      this._cursor.addTo(this._cursorLayer)
+      this._registerDrawToolEvents()
     }
-
-    delete this._adsorbPoint
-    if (this.options['needCtrl'] === domEvent.ctrlKey) {
-      this._updateAdsorbPoint(coordinate)
-    }
-  }
-
-  _updateAdsorbPoint(coordinate) {
-    if (!this._needFindGeometry) return
-    const availGeos = this._findGeometry(coordinate)
-    if (availGeos.length > 0) {
-      this._adsorbPoint = this._getAdsorbPoint(availGeos)
-    }
-    if (this._adsorbPoint) {
-      const { x, y } = this._adsorbPoint
-      this._cursor.setCoordinates([x, y])
-    }
-  }
-
-  _findGeometry(coordinate) {
-    let features = []
-    if (this._geosSetPoint.length > 0) {
-      const geos = this._findAvailGeos(this._treePoints, coordinate)
-      features = features.concat(geos)
-    }
-    if (this._geosSetLine.length > 0) {
-      const geos = this._findAvailGeos(this._treeLines, coordinate)
-      features = features.concat(geos)
-    }
-    return features
-  }
-
-  _findAvailGeos(tree, coordinate) {
-    const inspectExtent = this._createInspectExtent(coordinate)
-    const availGeos = tree.search(inspectExtent)
-    return availGeos.features
-  }
-
-  _createInspectExtent(coordinate) {
-    const radius = this._map.pixelToDistance(0, this.options['distance'])
-    const circle = new maptalks.Circle(coordinate, radius, {
-      properties: {},
-      numberOfShellPoints: this.options['shellPoints'],
-    })
-    return circle.toGeoJSON()
-  }
-
-  _getAdsorbPoint(features) {
-    let nearestFeature
-    const mousePoint = [this._mousePoint.x, this._mousePoint.y]
-    const points = features.filter(
-      (feature) => feature.geometry.type === 'Point',
-    )
-    if (points.length > 0) {
-      nearestFeature = this._getNearestPoint(mousePoint, points)
-    } else {
-      const lines = features.filter(
-        (feature) => feature.geometry.type === 'LineString',
-      )
-      nearestFeature = this._getNearestPointOnLine(mousePoint, lines)
-    }
-    const [x, y] = nearestFeature.geometry.coordinates
-    return { x, y }
-  }
-
-  _getNearestPoint(mousePoint, features) {
-    return nearestPoint(mousePoint, { type: 'FeatureCollection', features })
-  }
-
-  _getNearestPointOnLine(mousePoint, features) {
-    const multiLines = combine({ type: 'FeatureCollection', features })
-    return nearestPointOnLine(multiLines, mousePoint)
   }
 
   _updateGeosSet() {
@@ -337,15 +248,123 @@ export class Autoadsorb extends maptalks.Class {
     })
   }
 
+  _registerMapEvents() {
+    this._map.on('mousedown', this._mapMousedown, this)
+    this._map.on('mouseup', this._mapMouseup, this)
+    this._map.on('mousemove', this._mapMousemove, this)
+  }
+
+  _mapMousedown() {
+    this._needFindGeometry = !!this._geometry
+  }
+
+  _mapMouseup() {
+    this._needFindGeometry = !this._geometry
+  }
+
+  _mapMousemove({ coordinate, domEvent }) {
+    this._needDeal = true
+    this._mousePoint = coordinate
+
+    if (this._cursor) {
+      this._cursor.setCoordinates(coordinate)
+    } else {
+      this._cursor = new maptalks.Marker(coordinate)
+      this._cursor.addTo(this._cursorLayer)
+    }
+
+    delete this._adsorbPoint
+    if (this.options['needCtrl'] === domEvent.ctrlKey) {
+      this._updateAdsorbPoint(coordinate)
+    }
+  }
+
+  _updateAdsorbPoint(coordinate) {
+    if (!this._needFindGeometry) return
+    const availGeos = this._findGeometry(coordinate)
+    if (availGeos.length > 0) {
+      this._adsorbPoint = this._getAdsorbPoint(availGeos)
+    }
+    if (this._adsorbPoint) {
+      const { x, y } = this._adsorbPoint
+      this._cursor.setCoordinates([x, y])
+    }
+  }
+
+  _findGeometry(coordinate) {
+    let features = []
+    if (this._geosSetPoint.length > 0) {
+      const geos = this._findAvailGeos(this._treePoints, coordinate)
+      features = features.concat(geos)
+    }
+    if (this._geosSetLine.length > 0) {
+      const geos = this._findAvailGeos(this._treeLines, coordinate)
+      features = features.concat(geos)
+    }
+    return features
+  }
+
+  _findAvailGeos(tree, coordinate) {
+    const inspectExtent = this._createInspectExtent(coordinate)
+    const availGeos = tree.search(inspectExtent)
+    return availGeos.features
+  }
+
+  _createInspectExtent(coordinate) {
+    const radius = this._map.pixelToDistance(0, this.options['distance'])
+    const circle = new maptalks.Circle(coordinate, radius, {
+      properties: {},
+      numberOfShellPoints: this.options['shellPoints'],
+    })
+    return circle.toGeoJSON()
+  }
+
+  _getAdsorbPoint(features) {
+    let nearestFeature
+    const mousePoint = [this._mousePoint.x, this._mousePoint.y]
+    const points = features.filter(
+      (feature) => feature.geometry.type === 'Point',
+    )
+    if (points.length > 0) {
+      nearestFeature = this._getNearestPoint(mousePoint, points)
+    } else {
+      const lines = features.filter(
+        (feature) => feature.geometry.type === 'LineString',
+      )
+      nearestFeature = this._getNearestPointOnLine(mousePoint, lines)
+    }
+    const [x, y] = nearestFeature.geometry.coordinates
+    return { x, y }
+  }
+
+  _getNearestPoint(mousePoint, features) {
+    return nearestPoint(mousePoint, { type: 'FeatureCollection', features })
+  }
+
+  _getNearestPointOnLine(mousePoint, features) {
+    const multiLines = combine({ type: 'FeatureCollection', features })
+    return nearestPointOnLine(multiLines, mousePoint)
+  }
+
+  _registerGeometryEvents() {}
+
+  _registerDrawToolEvents() {}
+
   _disable() {
     this._isEnable = false
     if (this._cursorLayer) this._cursorLayer.hide()
-    map.off('mousedown', this._mapMousedown, this)
-    map.off('mousemove', this._mapMousemove, this)
-    map.off('mouseup', this._mapMouseup, this)
+    this._offMapEvents()
+    this._offDrawToolEvents()
+    this._offGeometryEvents()
     this._resetGeosSet()
     delete this._geometry
     delete this._geometryCoords
+  }
+
+  _offMapEvents() {
+    this._map.off('mousedown', this._mapMousedown, this)
+    this._map.off('mousemove', this._mapMousemove, this)
+    this._map.off('mouseup', this._mapMouseup, this)
   }
 
   _resetGeosSet() {
