@@ -77,7 +77,6 @@ export class Autoadsorb extends maptalks.Class {
       if (!this._map) this._addTo(drawTool.getMap())
       this._disableMapTool()
       this._geometry = geometry
-      this._geometryCoords = geometry.getCoordinates()
       geometry.on('editstart', this._enable, this)
       geometry.on('editend remove', this._disable, this)
       if (geometry.isEditing()) this._enable()
@@ -132,11 +131,9 @@ export class Autoadsorb extends maptalks.Class {
     if (this._cursorLayer) this._cursorLayer.show()
     this._updateGeosSet()
     this._registerMapEvents()
-    if (this.geometry) {
-      this._registerGeometryEvents()
-    } else {
-      this._registerDrawToolEvents()
-    }
+    this._geometry
+      ? this._registerGeometryEvents()
+      : this._registerDrawToolEvents()
   }
 
   _updateGeosSet() {
@@ -351,7 +348,40 @@ export class Autoadsorb extends maptalks.Class {
     return nearestPointOnLine(multiLines, mousePoint)
   }
 
-  _registerGeometryEvents() {}
+  _registerGeometryEvents() {
+    // this._geometry.on('shapechange', this._setShadowCoordinates, this)
+    this._geometry.on('handledragging', this._setShadowCenter, this)
+    this._geometry.on('editrecord', this._resetShadowCenter, this)
+  }
+
+  _setShadowCoordinates(e) {
+    if (!this._needDeal || !this._adsorbPoint) return
+    const geometry = e.target
+  }
+
+  _setShadowCenter(e) {
+    this._handledragging = true
+    const geometry = e.target
+    const center = geometry.getCenter()
+    const point = this._adsorbPoint || this._mousePoint
+    const offset = this._getCoordsOffset(center, point)
+    geometry.translate(...offset)
+  }
+
+  _getCoordsOffset(coordsFrom, coordsTo) {
+    return [coordsTo.x - coordsFrom.x, coordsTo.y - coordsFrom.y]
+  }
+
+  _resetShadowCenter(e) {
+    if (!this._handledragging || !this._adsorbPoint) return
+    const geometry = e.target
+    const center = geometry.getCenter()
+    const point = this._adsorbPoint
+    const offset = this._getCoordsOffset(center, point)
+    geometry.translate(...offset)
+    geometry._editor._shadow.translate(...offset)
+    delete this._handledragging
+  }
 
   _registerDrawToolEvents() {
     this._drawTool.on('drawstart drawvertex', this._resetCoordsAndPoint, this)
@@ -428,11 +458,9 @@ export class Autoadsorb extends maptalks.Class {
     this._isEnable = false
     if (this._cursorLayer) this._cursorLayer.hide()
     this._offMapEvents()
-    this._offGeometryEvents()
-    this._offDrawToolEvents()
+    this._geometry ? this._offGeometryEvents() : this._offDrawToolEvents()
     this._resetGeosSet()
     delete this._geometry
-    delete this._geometryCoords
   }
 
   _offMapEvents() {
@@ -441,7 +469,11 @@ export class Autoadsorb extends maptalks.Class {
     this._map.off('mouseup', this._mapMouseup, this)
   }
 
-  _offGeometryEvents() {}
+  _offGeometryEvents() {
+    // this._geometry.off('shapechange', this._setShadowCoordinates, this)
+    this._geometry.off('handledragging', this._setShadowCenter, this)
+    this._geometry.off('editrecord', this._resetShadowCenter, this)
+  }
 
   _offDrawToolEvents() {
     this._drawTool.off('drawstart drawvertex', this._resetCoordsAndPoint, this)

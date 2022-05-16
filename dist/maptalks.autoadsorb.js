@@ -3776,7 +3776,6 @@ var Autoadsorb = function (_maptalks$Class) {
       if (!this._map) this._addTo(drawTool.getMap());
       this._disableMapTool();
       this._geometry = geometry;
-      this._geometryCoords = geometry.getCoordinates();
       geometry.on('editstart', this._enable, this);
       geometry.on('editend remove', this._disable, this);
       if (geometry.isEditing()) this._enable();
@@ -3833,11 +3832,7 @@ var Autoadsorb = function (_maptalks$Class) {
     if (this._cursorLayer) this._cursorLayer.show();
     this._updateGeosSet();
     this._registerMapEvents();
-    if (this.geometry) {
-      this._registerGeometryEvents();
-    } else {
-      this._registerDrawToolEvents();
-    }
+    this._geometry ? this._registerGeometryEvents() : this._registerDrawToolEvents();
   };
 
   Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
@@ -4058,7 +4053,42 @@ var Autoadsorb = function (_maptalks$Class) {
     return nearestPointOnLine(multiLines, mousePoint);
   };
 
-  Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {};
+  Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {
+    // this._geometry.on('shapechange', this._setShadowCoordinates, this)
+    this._geometry.on('handledragging', this._setShadowCenter, this);
+    this._geometry.on('editrecord', this._resetShadowCenter, this);
+  };
+
+  Autoadsorb.prototype._setShadowCoordinates = function _setShadowCoordinates(e) {
+    if (!this._needDeal || !this._adsorbPoint) return;
+    var geometry = e.target;
+  };
+
+  Autoadsorb.prototype._setShadowCenter = function _setShadowCenter(e) {
+    this._handledragging = true;
+    var geometry = e.target;
+    var center = geometry.getCenter();
+    var point = this._adsorbPoint || this._mousePoint;
+    var offset = this._getCoordsOffset(center, point);
+    geometry.translate.apply(geometry, offset);
+  };
+
+  Autoadsorb.prototype._getCoordsOffset = function _getCoordsOffset(coordsFrom, coordsTo) {
+    return [coordsTo.x - coordsFrom.x, coordsTo.y - coordsFrom.y];
+  };
+
+  Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
+    var _geometry$_editor$_sh;
+
+    if (!this._handledragging || !this._adsorbPoint) return;
+    var geometry = e.target;
+    var center = geometry.getCenter();
+    var point = this._adsorbPoint;
+    var offset = this._getCoordsOffset(center, point);
+    geometry.translate.apply(geometry, offset);
+    (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
+    delete this._handledragging;
+  };
 
   Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
     this._drawTool.on('drawstart drawvertex', this._resetCoordsAndPoint, this);
@@ -4129,11 +4159,9 @@ var Autoadsorb = function (_maptalks$Class) {
     this._isEnable = false;
     if (this._cursorLayer) this._cursorLayer.hide();
     this._offMapEvents();
-    this._offGeometryEvents();
-    this._offDrawToolEvents();
+    this._geometry ? this._offGeometryEvents() : this._offDrawToolEvents();
     this._resetGeosSet();
     delete this._geometry;
-    delete this._geometryCoords;
   };
 
   Autoadsorb.prototype._offMapEvents = function _offMapEvents() {
@@ -4142,7 +4170,11 @@ var Autoadsorb = function (_maptalks$Class) {
     this._map.off('mouseup', this._mapMouseup, this);
   };
 
-  Autoadsorb.prototype._offGeometryEvents = function _offGeometryEvents() {};
+  Autoadsorb.prototype._offGeometryEvents = function _offGeometryEvents() {
+    // this._geometry.off('shapechange', this._setShadowCoordinates, this)
+    this._geometry.off('handledragging', this._setShadowCenter, this);
+    this._geometry.off('editrecord', this._resetShadowCenter, this);
+  };
 
   Autoadsorb.prototype._offDrawToolEvents = function _offDrawToolEvents() {
     this._drawTool.off('drawstart drawvertex', this._resetCoordsAndPoint, this);
