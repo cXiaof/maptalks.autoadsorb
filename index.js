@@ -384,32 +384,43 @@ export class Autoadsorb extends maptalks.Class {
     this._shapechange = true
     if (!this._needDeal || !this._adsorbPoint) return
     const geometry = e.target
-    if (geometry instanceof maptalks.Circle)
-      return this._setShadowCircle(geometry)
-    if (geometry instanceof maptalks.Ellipse)
-      return this._setShadowEllipse(geometry)
+    if (geometry instanceof maptalks.Circle) {
+      this._needDeal = false
+      this._setShadowCircle(geometry)
+    } else if (geometry instanceof maptalks.Ellipse) {
+      this._needDeal = false
+      this._setShadowEllipse(geometry)
+    } else {
+    }
   }
 
-  _setShadowCircle(geometry) {
+  _setShadowCircle(geo) {
     this._needDeal = false
-    const coords = geometry.getCoordinates()
-    const radius = this._map
-      .getProjection()
-      .measureLength([coords, this._adsorbPoint])
-    geometry._editor._shadow.setRadius(radius)
+    const radius = this._calcCircleRadius(geo)
+    geo._editor._shadow.setRadius(radius)
   }
 
-  _setShadowEllipse(geometry) {
+  _calcCircleRadius(geo) {
+    const coords = geo.getCoordinates()
+    return this._map.getProjection().measureLength([coords, this._adsorbPoint])
+  }
+
+  _setShadowEllipse(geo) {
     this._needDeal = false
+    const [width, height] = this._calcEllipseSize(geo)
+    geo._editor._shadow.setWidth(width).setHeight(height)
+  }
+
+  _calcEllipseSize(geo) {
+    const coords = geo.getCoordinates()
     const { x, y } = this._adsorbPoint
-    const coords = geometry.getCoordinates()
     const width = this._map
       .getProjection()
       .measureLength([coords, { x, y: coords.y }])
     const height = this._map
       .getProjection()
       .measureLength([coords, { x: coords.x, y }])
-    geometry._editor._shadow.setWidth(width * 2).setHeight(height * 2)
+    return [width * 2, height * 2]
   }
 
   _resetShadowCenter(e) {
@@ -442,58 +453,61 @@ export class Autoadsorb extends maptalks.Class {
     if (!this._adsorbPoint) return
     const {
       options: { mode },
-      _geometry: geo,
+      _geometry: geometry,
     } = e.target
-    const coords = geo.getCoordinates()
-    const { x, y } = this._adsorbPoint
     switch (mode) {
       case 'Point':
-        geo.setCoordinates(this._adsorbPoint)
+        geometry.setCoordinates(this._adsorbPoint)
         break
       case 'Rectangle':
-        if (coords[0].length === 0) {
-          const point = this._map.coordinateToPoint(this._adsorbPoint)
-          e.geometry._firstClick = this._map._pointToPrj(point)
-        } else {
-          coords[0][1].x = x
-          coords[0][2].x = x
-          coords[0][2].y = y
-          coords[0][3].y = y
-          geo.setCoordinates(coords)
-        }
+        this._resetRectangle(geometry, e)
         break
       case 'Circle':
-        if (e.type === 'drawstart') {
-          geo.setCoordinates(this._adsorbPoint)
-          return
-        }
-        const radius = this._map
-          .getProjection()
-          .measureLength([coords, this._adsorbPoint])
-        geo.setRadius(radius)
+        e.type === 'drawstart'
+          ? geometry.setCoordinates(this._adsorbPoint)
+          : this._resetCircle(geometry)
         break
       case 'Ellipse':
-        if (e.type === 'drawstart') {
-          geo.setCoordinates(this._adsorbPoint)
-          return
-        }
-        const width = this._map
-          .getProjection()
-          .measureLength([coords, { x, y: coords.y }])
-        const height = this._map
-          .getProjection()
-          .measureLength([coords, { x: coords.x, y }])
-        geo
-          .setWidth(width * 2)
-          .setHeight(height * 2)
-          ._updateCache()
+        e.type === 'drawstart'
+          ? geometry.setCoordinates(this._adsorbPoint)
+          : this._resetEllipse(geometry)
         break
       default:
-        coords.pop()
-        coords.push(this._adsorbPoint)
-        geo.setCoordinates(coords)
+        this._resetCommon(geometry)
         break
     }
+  }
+
+  _resetRectangle(geo, e) {
+    const coords = geo.getCoordinates()
+    const { x, y } = this._adsorbPoint
+    if (coords[0].length === 0) {
+      const point = this._map.coordinateToPoint(this._adsorbPoint)
+      e.geometry._firstClick = this._map._pointToPrj(point)
+    } else {
+      coords[0][1].x = x
+      coords[0][2].x = x
+      coords[0][2].y = y
+      coords[0][3].y = y
+      geo.setCoordinates(coords)
+    }
+  }
+
+  _resetCircle(geo) {
+    const radius = this._calcCircleRadius(geo)
+    geo.setRadius(radius)
+  }
+
+  _resetEllipse(geo) {
+    const [width, height] = this._calcEllipseSize(geo)
+    geo.setWidth(width).setHeight(height)._updateCache()
+  }
+
+  _resetCommon(geo) {
+    const coords = geo.getCoordinates()
+    coords.pop()
+    coords.push(this._adsorbPoint)
+    geo.setCoordinates(coords)
   }
 
   _resetClickPoint(e) {

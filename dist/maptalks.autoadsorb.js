@@ -4082,27 +4082,45 @@ var Autoadsorb = function (_maptalks$Class) {
     this._shapechange = true;
     if (!this._needDeal || !this._adsorbPoint) return;
     var geometry = e.target;
-    if (geometry instanceof maptalks.Circle) return this._setShadowCircle(geometry);
-    if (geometry instanceof maptalks.Ellipse) return this._setShadowEllipse(geometry);
+    if (geometry instanceof maptalks.Circle) {
+      this._needDeal = false;
+      this._setShadowCircle(geometry);
+    } else if (geometry instanceof maptalks.Ellipse) {
+      this._needDeal = false;
+      this._setShadowEllipse(geometry);
+    } else {}
   };
 
-  Autoadsorb.prototype._setShadowCircle = function _setShadowCircle(geometry) {
+  Autoadsorb.prototype._setShadowCircle = function _setShadowCircle(geo) {
     this._needDeal = false;
-    var coords = geometry.getCoordinates();
-    var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
-    geometry._editor._shadow.setRadius(radius);
+    var radius = this._calcCircleRadius(geo);
+    geo._editor._shadow.setRadius(radius);
   };
 
-  Autoadsorb.prototype._setShadowEllipse = function _setShadowEllipse(geometry) {
+  Autoadsorb.prototype._calcCircleRadius = function _calcCircleRadius(geo) {
+    var coords = geo.getCoordinates();
+    return this._map.getProjection().measureLength([coords, this._adsorbPoint]);
+  };
+
+  Autoadsorb.prototype._setShadowEllipse = function _setShadowEllipse(geo) {
     this._needDeal = false;
+
+    var _calcEllipseSize2 = this._calcEllipseSize(geo),
+        width = _calcEllipseSize2[0],
+        height = _calcEllipseSize2[1];
+
+    geo._editor._shadow.setWidth(width).setHeight(height);
+  };
+
+  Autoadsorb.prototype._calcEllipseSize = function _calcEllipseSize(geo) {
+    var coords = geo.getCoordinates();
     var _adsorbPoint2 = this._adsorbPoint,
         x = _adsorbPoint2.x,
         y = _adsorbPoint2.y;
 
-    var coords = geometry.getCoordinates();
     var width = this._map.getProjection().measureLength([coords, { x: x, y: coords.y }]);
     var height = this._map.getProjection().measureLength([coords, { x: coords.x, y: y }]);
-    geometry._editor._shadow.setWidth(width * 2).setHeight(height * 2);
+    return [width * 2, height * 2];
   };
 
   Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
@@ -4137,52 +4155,63 @@ var Autoadsorb = function (_maptalks$Class) {
     if (!this._adsorbPoint) return;
     var _e$target = e.target,
         mode = _e$target.options.mode,
-        geo = _e$target._geometry;
+        geometry = _e$target._geometry;
 
+    switch (mode) {
+      case 'Point':
+        geometry.setCoordinates(this._adsorbPoint);
+        break;
+      case 'Rectangle':
+        this._resetRectangle(geometry, e);
+        break;
+      case 'Circle':
+        e.type === 'drawstart' ? geometry.setCoordinates(this._adsorbPoint) : this._resetCircle(geometry);
+        break;
+      case 'Ellipse':
+        e.type === 'drawstart' ? geometry.setCoordinates(this._adsorbPoint) : this._resetEllipse(geometry);
+        break;
+      default:
+        this._resetCommon(geometry);
+        break;
+    }
+  };
+
+  Autoadsorb.prototype._resetRectangle = function _resetRectangle(geo, e) {
     var coords = geo.getCoordinates();
     var _adsorbPoint3 = this._adsorbPoint,
         x = _adsorbPoint3.x,
         y = _adsorbPoint3.y;
 
-    switch (mode) {
-      case 'Point':
-        geo.setCoordinates(this._adsorbPoint);
-        break;
-      case 'Rectangle':
-        if (coords[0].length === 0) {
-          var point = this._map.coordinateToPoint(this._adsorbPoint);
-          e.geometry._firstClick = this._map._pointToPrj(point);
-        } else {
-          coords[0][1].x = x;
-          coords[0][2].x = x;
-          coords[0][2].y = y;
-          coords[0][3].y = y;
-          geo.setCoordinates(coords);
-        }
-        break;
-      case 'Circle':
-        if (e.type === 'drawstart') {
-          geo.setCoordinates(this._adsorbPoint);
-          return;
-        }
-        var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
-        geo.setRadius(radius);
-        break;
-      case 'Ellipse':
-        if (e.type === 'drawstart') {
-          geo.setCoordinates(this._adsorbPoint);
-          return;
-        }
-        var width = this._map.getProjection().measureLength([coords, { x: x, y: coords.y }]);
-        var height = this._map.getProjection().measureLength([coords, { x: coords.x, y: y }]);
-        geo.setWidth(width * 2).setHeight(height * 2)._updateCache();
-        break;
-      default:
-        coords.pop();
-        coords.push(this._adsorbPoint);
-        geo.setCoordinates(coords);
-        break;
+    if (coords[0].length === 0) {
+      var point = this._map.coordinateToPoint(this._adsorbPoint);
+      e.geometry._firstClick = this._map._pointToPrj(point);
+    } else {
+      coords[0][1].x = x;
+      coords[0][2].x = x;
+      coords[0][2].y = y;
+      coords[0][3].y = y;
+      geo.setCoordinates(coords);
     }
+  };
+
+  Autoadsorb.prototype._resetCircle = function _resetCircle(geo) {
+    var radius = this._calcCircleRadius(geo);
+    geo.setRadius(radius);
+  };
+
+  Autoadsorb.prototype._resetEllipse = function _resetEllipse(geo) {
+    var _calcEllipseSize3 = this._calcEllipseSize(geo),
+        width = _calcEllipseSize3[0],
+        height = _calcEllipseSize3[1];
+
+    geo.setWidth(width).setHeight(height)._updateCache();
+  };
+
+  Autoadsorb.prototype._resetCommon = function _resetCommon(geo) {
+    var coords = geo.getCoordinates();
+    coords.pop();
+    coords.push(this._adsorbPoint);
+    geo.setCoordinates(coords);
   };
 
   Autoadsorb.prototype._resetClickPoint = function _resetClickPoint(e) {
