@@ -4074,7 +4074,7 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._checkCenter = function _checkCenter() {
-    this._dragCenterHandle = this._shapechange;
+    this._dragCenterHandle = !this._shapechange;
     delete this._shapechange;
   };
 
@@ -4082,6 +4082,27 @@ var Autoadsorb = function (_maptalks$Class) {
     this._shapechange = true;
     if (!this._needDeal || !this._adsorbPoint) return;
     var geometry = e.target;
+    if (geometry instanceof maptalks.Circle) return this._setShadowCircle(geometry);
+    if (geometry instanceof maptalks.Ellipse) return this._setShadowEllipse(geometry);
+  };
+
+  Autoadsorb.prototype._setShadowCircle = function _setShadowCircle(geometry) {
+    this._needDeal = false;
+    var coords = geometry.getCoordinates();
+    var radius = this._map.getProjection().measureLength([coords, this._adsorbPoint]);
+    geometry._editor._shadow.setRadius(radius);
+  };
+
+  Autoadsorb.prototype._setShadowEllipse = function _setShadowEllipse(geometry) {
+    this._needDeal = false;
+    var _adsorbPoint2 = this._adsorbPoint,
+        x = _adsorbPoint2.x,
+        y = _adsorbPoint2.y;
+
+    var coords = geometry.getCoordinates();
+    var width = this._map.getProjection().measureLength([coords, { x: x, y: coords.y }]);
+    var height = this._map.getProjection().measureLength([coords, { x: coords.x, y: y }]);
+    geometry._editor._shadow.setWidth(width * 2).setHeight(height * 2);
   };
 
   Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
@@ -4119,9 +4140,9 @@ var Autoadsorb = function (_maptalks$Class) {
         geo = _e$target._geometry;
 
     var coords = geo.getCoordinates();
-    var _adsorbPoint2 = this._adsorbPoint,
-        x = _adsorbPoint2.x,
-        y = _adsorbPoint2.y;
+    var _adsorbPoint3 = this._adsorbPoint,
+        x = _adsorbPoint3.x,
+        y = _adsorbPoint3.y;
 
     switch (mode) {
       case 'Point':

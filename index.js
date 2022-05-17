@@ -376,7 +376,7 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _checkCenter() {
-    this._dragCenterHandle = this._shapechange
+    this._dragCenterHandle = !this._shapechange
     delete this._shapechange
   }
 
@@ -384,6 +384,32 @@ export class Autoadsorb extends maptalks.Class {
     this._shapechange = true
     if (!this._needDeal || !this._adsorbPoint) return
     const geometry = e.target
+    if (geometry instanceof maptalks.Circle)
+      return this._setShadowCircle(geometry)
+    if (geometry instanceof maptalks.Ellipse)
+      return this._setShadowEllipse(geometry)
+  }
+
+  _setShadowCircle(geometry) {
+    this._needDeal = false
+    const coords = geometry.getCoordinates()
+    const radius = this._map
+      .getProjection()
+      .measureLength([coords, this._adsorbPoint])
+    geometry._editor._shadow.setRadius(radius)
+  }
+
+  _setShadowEllipse(geometry) {
+    this._needDeal = false
+    const { x, y } = this._adsorbPoint
+    const coords = geometry.getCoordinates()
+    const width = this._map
+      .getProjection()
+      .measureLength([coords, { x, y: coords.y }])
+    const height = this._map
+      .getProjection()
+      .measureLength([coords, { x: coords.x, y }])
+    geometry._editor._shadow.setWidth(width * 2).setHeight(height * 2)
   }
 
   _resetShadowCenter(e) {
