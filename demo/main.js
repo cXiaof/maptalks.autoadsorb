@@ -55,6 +55,7 @@ drawTool.on('drawend', (param) => {
   geometry.on('contextmenu', () => {
     if (geometry.isEditing()) {
       geometry.endEdit()
+      autoAdsorb.refreshTargets()
     } else {
       geometry.startEdit()
       autoAdsorb.bindGeometry(geometry)

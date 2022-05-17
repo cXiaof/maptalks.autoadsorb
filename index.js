@@ -259,17 +259,18 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _registerMapEvents() {
+    this._needFindGeometry = !this._geometry
     this._map.on('mousedown', this._mapMousedown, this)
     this._map.on('mouseup', this._mapMouseup, this)
     this._map.on('mousemove', this._mapMousemove, this)
   }
 
   _mapMousedown() {
-    this._needFindGeometry = !!this._geometry
+    if (this._geometry) this._needFindGeometry = true
   }
 
   _mapMouseup() {
-    this._needFindGeometry = !this._geometry
+    if (this._geometry) this._needFindGeometry = false
   }
 
   _mapMousemove({ coordinate, domEvent }) {
@@ -369,31 +370,11 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _registerGeometryEvents() {
-    this._geometry.on('handledragstart', this._initGandleDragCounter, this)
-    this._geometry.on('handledragging', this._setShadowCenter, this)
     this._geometry.on('shapechange', this._setShadowCoordinates, this)
     this._geometry.on('editrecord', this._resetShadowCenter, this)
   }
 
-  _initGandleDragCounter() {
-    this._handledragCounter = 0
-  }
-
-  _setShadowCenter(e) {
-    this._handledragCounter++
-    const geometry = e.target
-    const center = geometry.getCenter()
-    const point = this._adsorbPoint || this._mousePoint
-    const offset = this._getCoordsOffset(center, point)
-    geometry.translate(...offset)
-  }
-
-  _getCoordsOffset(coordsFrom, coordsTo) {
-    return [coordsTo.x - coordsFrom.x, coordsTo.y - coordsFrom.y]
-  }
-
   _setShadowCoordinates(e) {
-    this._handledragCounter--
     if (!this._needDeal || !this._adsorbPoint) return
     const geometry = e.target
   }
@@ -404,15 +385,11 @@ export class Autoadsorb extends maptalks.Class {
     if (geometry instanceof maptalks.Marker) {
       geometry.setCoordinates(this._adsorbPoint)
     } else {
-      console.log(this._handledragCounter)
-      if (this._handledragCounter > 0) {
-        const center = geometry.getCenter()
-        const point = this._adsorbPoint
-        const offset = this._getCoordsOffset(center, point)
-        geometry.translate(...offset)
-        geometry._editor._shadow.translate(...offset)
-      }
-      delete this._handledragCounter
+      // const center = geometry.getCenter()
+      // const point = this._adsorbPoint
+      // const offset = [point.x - center.x, point.y - center.y]
+      // geometry.translate(...offset)
+      // geometry._editor._shadow.translate(...offset)
     }
   }
 
@@ -439,11 +416,16 @@ export class Autoadsorb extends maptalks.Class {
         geo.setCoordinates(this._adsorbPoint)
         break
       case 'Rectangle':
-        coords[0][1].x = x
-        coords[0][2].x = x
-        coords[0][2].y = y
-        coords[0][3].y = y
-        geo.setCoordinates(coords)
+        if (coords[0].length === 0) {
+          const point = this._map.coordinateToPoint(this._adsorbPoint)
+          e.geometry._firstClick = this._map._pointToPrj(point)
+        } else {
+          coords[0][1].x = x
+          coords[0][2].x = x
+          coords[0][2].y = y
+          coords[0][3].y = y
+          geo.setCoordinates(coords)
+        }
         break
       case 'Circle':
         if (e.type === 'drawstart') {
@@ -497,14 +479,13 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _offMapEvents() {
+    delete this._needFindGeometry
     this._map.off('mousedown', this._mapMousedown, this)
     this._map.off('mousemove', this._mapMousemove, this)
     this._map.off('mouseup', this._mapMouseup, this)
   }
 
   _offGeometryEvents() {
-    this._geometry.off('handledragstart', this._initGandleDragCounter, this)
-    this._geometry.off('handledragging', this._setShadowCenter, this)
     this._geometry.off('shapechange', this._setShadowCoordinates, this)
     this._geometry.off('editrecord', this._resetShadowCenter, this)
   }
