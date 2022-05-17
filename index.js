@@ -80,7 +80,6 @@ export class Autoadsorb extends maptalks.Class {
   remove() {
     this._disable()
     if (this._cursorLayer) this._cursorLayer.remove()
-    delete this._needDeal
     delete this._treePoints
     delete this._treeLines
     delete this._cursorLayer
@@ -274,7 +273,6 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _mapMousemove({ coordinate, domEvent }) {
-    this._needDeal = true
     this._mousePoint = coordinate
 
     if (this._cursor) {
@@ -370,6 +368,7 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _registerGeometryEvents() {
+    this._dragCenterHandle = null
     this._geometry.on('handledragend', this._checkCenter, this)
     this._geometry.on('shapechange', this._setShadowCoordinates, this)
     this._geometry.on('editrecord', this._resetShadowCenter, this)
@@ -377,25 +376,33 @@ export class Autoadsorb extends maptalks.Class {
 
   _checkCenter() {
     this._dragCenterHandle = !this._shapechange
-    delete this._shapechange
   }
 
   _setShadowCoordinates(e) {
     this._shapechange = true
-    if (!this._needDeal || !this._adsorbPoint) return
+    if (!this._adsorbPoint) return
     const geometry = e.target
     if (geometry instanceof maptalks.Circle) {
-      this._needDeal = false
       this._setShadowCircle(geometry)
     } else if (geometry instanceof maptalks.Ellipse) {
-      this._needDeal = false
       this._setShadowEllipse(geometry)
     } else {
+      if (this._draggingCenter()) return
+      const coords = geometry.getCoordinates()
+      coords.length === 1
+        ? this._setShadowCommon(geometry)
+        : this._setShadowWithHoles(geometry)
     }
   }
 
+  _draggingCenter() {
+    return (
+      this._dragCenterHandle !== null &&
+      maptalks.Util.isNil(this._dragCenterHandle)
+    )
+  }
+
   _setShadowCircle(geo) {
-    this._needDeal = false
     const radius = this._calcCircleRadius(geo)
     geo._editor._shadow.setRadius(radius)
   }
@@ -406,7 +413,6 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _setShadowEllipse(geo) {
-    this._needDeal = false
     const [width, height] = this._calcEllipseSize(geo)
     geo._editor._shadow.setWidth(width).setHeight(height)
   }
@@ -423,7 +429,18 @@ export class Autoadsorb extends maptalks.Class {
     return [width * 2, height * 2]
   }
 
+  _setShadowCommon(geo) {
+    const coords = geo.getCoordinates()
+    const coords0 = coords[0]
+    console.log(coords0)
+  }
+
+  _setShadowWithHoles(geo) {
+    console.log(geo)
+  }
+
   _resetShadowCenter(e) {
+    delete this._shapechange
     if (!this._adsorbPoint) return
     const geometry = e.target
     if (geometry instanceof maptalks.Marker) {
@@ -437,6 +454,7 @@ export class Autoadsorb extends maptalks.Class {
         geometry._editor._shadow.translate(...offset)
       }
     }
+    delete this._dragCenterHandle
   }
 
   _registerDrawToolEvents() {

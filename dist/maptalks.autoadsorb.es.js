@@ -6,7 +6,7 @@
 /*!
  * requires maptalks@>=0.46.0 
  */
-import { Circle, Class, DrawTool, Ellipse, Geometry, GeometryCollection, INTERNAL_LAYER_PREFIX, LineString, Marker, MultiLineString, MultiPoint, VectorLayer } from 'maptalks';
+import { Circle, Class, DrawTool, Ellipse, Geometry, GeometryCollection, INTERNAL_LAYER_PREFIX, LineString, Marker, MultiLineString, MultiPoint, Util, VectorLayer } from 'maptalks';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -3775,7 +3775,6 @@ var Autoadsorb = function (_maptalks$Class) {
   Autoadsorb.prototype.remove = function remove() {
     this._disable();
     if (this._cursorLayer) this._cursorLayer.remove();
-    delete this._needDeal;
     delete this._treePoints;
     delete this._treeLines;
     delete this._cursorLayer;
@@ -3966,7 +3965,6 @@ var Autoadsorb = function (_maptalks$Class) {
     var coordinate = _ref.coordinate,
         domEvent = _ref.domEvent;
 
-    this._needDeal = true;
     this._mousePoint = coordinate;
 
     if (this._cursor) {
@@ -4064,6 +4062,7 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {
+    this._dragCenterHandle = null;
     this._geometry.on('handledragend', this._checkCenter, this);
     this._geometry.on('shapechange', this._setShadowCoordinates, this);
     this._geometry.on('editrecord', this._resetShadowCenter, this);
@@ -4071,24 +4070,28 @@ var Autoadsorb = function (_maptalks$Class) {
 
   Autoadsorb.prototype._checkCenter = function _checkCenter() {
     this._dragCenterHandle = !this._shapechange;
-    delete this._shapechange;
   };
 
   Autoadsorb.prototype._setShadowCoordinates = function _setShadowCoordinates(e) {
     this._shapechange = true;
-    if (!this._needDeal || !this._adsorbPoint) return;
+    if (!this._adsorbPoint) return;
     var geometry = e.target;
     if (geometry instanceof Circle) {
-      this._needDeal = false;
       this._setShadowCircle(geometry);
     } else if (geometry instanceof Ellipse) {
-      this._needDeal = false;
       this._setShadowEllipse(geometry);
-    } else {}
+    } else {
+      if (this._draggingCenter()) return;
+      var coords = geometry.getCoordinates();
+      coords.length === 1 ? this._setShadowCommon(geometry) : this._setShadowWithHoles(geometry);
+    }
+  };
+
+  Autoadsorb.prototype._draggingCenter = function _draggingCenter() {
+    return this._dragCenterHandle !== null && Util.isNil(this._dragCenterHandle);
   };
 
   Autoadsorb.prototype._setShadowCircle = function _setShadowCircle(geo) {
-    this._needDeal = false;
     var radius = this._calcCircleRadius(geo);
     geo._editor._shadow.setRadius(radius);
   };
@@ -4099,8 +4102,6 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._setShadowEllipse = function _setShadowEllipse(geo) {
-    this._needDeal = false;
-
     var _calcEllipseSize2 = this._calcEllipseSize(geo),
         width = _calcEllipseSize2[0],
         height = _calcEllipseSize2[1];
@@ -4119,7 +4120,18 @@ var Autoadsorb = function (_maptalks$Class) {
     return [width * 2, height * 2];
   };
 
+  Autoadsorb.prototype._setShadowCommon = function _setShadowCommon(geo) {
+    var coords = geo.getCoordinates();
+    var coords0 = coords[0];
+    console.log(coords0);
+  };
+
+  Autoadsorb.prototype._setShadowWithHoles = function _setShadowWithHoles(geo) {
+    console.log(geo);
+  };
+
   Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
+    delete this._shapechange;
     if (!this._adsorbPoint) return;
     var geometry = e.target;
     if (geometry instanceof Marker) {
@@ -4135,6 +4147,7 @@ var Autoadsorb = function (_maptalks$Class) {
         (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
       }
     }
+    delete this._dragCenterHandle;
   };
 
   Autoadsorb.prototype._registerDrawToolEvents = function _registerDrawToolEvents() {
