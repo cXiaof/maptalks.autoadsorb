@@ -13,13 +13,6 @@ const options = {
   distance: 10,
   shellPoints: 60,
   needCtrl: false,
-  cursorSymbol: {
-    markerType: 'ellipse',
-    markerFill: '#de3333',
-    markerWidth: 4,
-    markerHeight: 4,
-    markerLineWidth: 0,
-  },
 }
 
 const cursorLayerName = `${maptalks.INTERNAL_LAYER_PREFIX}cxiaof_autoadsorb`
@@ -109,9 +102,24 @@ export class Autoadsorb extends maptalks.Class {
 
   _newCursorLayer() {
     this._cursorLayer = new maptalks.VectorLayer(cursorLayerName, {
-      style: { symbol: this.options['cursorSymbol'] },
+      style: { symbol: this._getCursorSymbol() },
     })
     this._cursorLayer.addTo(this._map).bringToFront()
+  }
+
+  _getCursorSymbol(symbol) {
+    return Object.assign(
+      {
+        markerType: 'ellipse',
+        markerFill: '#fff',
+        markerLineColor: '#272822',
+        markerLineWidth: 2,
+        markerWidth: 10,
+        markerHeight: 10,
+        opacity: 0.4,
+      },
+      symbol,
+    )
   }
 
   _saveAdsorbLayers() {
@@ -290,6 +298,8 @@ export class Autoadsorb extends maptalks.Class {
     if (this._adsorbPoint) {
       const { x, y } = this._adsorbPoint
       this._cursor.setCoordinates([x, y])
+    } else {
+      this._cursor.setSymbol(this._getCursorSymbol())
     }
   }
 
@@ -329,11 +339,21 @@ export class Autoadsorb extends maptalks.Class {
     )
     if (points.length > 0) {
       nearestFeature = this._getNearestPoint(mousePoint, points)
+      this._cursor.setSymbol(
+        this._getCursorSymbol({
+          markerFill: '#f5871f',
+          markerLineColor: '#0078a8',
+          opacity: 1,
+        }),
+      )
     } else {
       const lines = features.filter(
         (feature) => feature.geometry.type === 'LineString',
       )
       nearestFeature = this._getNearestPointOnLine(mousePoint, lines)
+      this._cursor.setSymbol(
+        this._getCursorSymbol({ markerLineColor: '#0078a8', opacity: 1 }),
+      )
     }
     const [x, y] = nearestFeature.geometry.coordinates
     return { x, y }
@@ -349,18 +369,18 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _registerGeometryEvents() {
-    // this._geometry.on('shapechange', this._setShadowCoordinates, this)
+    this._geometry.on('handledragstart', this._initGandleDragCounter, this)
     this._geometry.on('handledragging', this._setShadowCenter, this)
+    this._geometry.on('shapechange', this._setShadowCoordinates, this)
     this._geometry.on('editrecord', this._resetShadowCenter, this)
   }
 
-  _setShadowCoordinates(e) {
-    if (!this._needDeal || !this._adsorbPoint) return
-    const geometry = e.target
+  _initGandleDragCounter() {
+    this._handledragCounter = 0
   }
 
   _setShadowCenter(e) {
-    this._handledragging = true
+    this._handledragCounter++
     const geometry = e.target
     const center = geometry.getCenter()
     const point = this._adsorbPoint || this._mousePoint
@@ -372,19 +392,27 @@ export class Autoadsorb extends maptalks.Class {
     return [coordsTo.x - coordsFrom.x, coordsTo.y - coordsFrom.y]
   }
 
+  _setShadowCoordinates(e) {
+    this._handledragCounter--
+    if (!this._needDeal || !this._adsorbPoint) return
+    const geometry = e.target
+  }
+
   _resetShadowCenter(e) {
     if (!this._adsorbPoint) return
     const geometry = e.target
     if (geometry instanceof maptalks.Marker) {
       geometry.setCoordinates(this._adsorbPoint)
     } else {
-      if (!this._handledragging) return
-      const center = geometry.getCenter()
-      const point = this._adsorbPoint
-      const offset = this._getCoordsOffset(center, point)
-      geometry.translate(...offset)
-      geometry._editor._shadow.translate(...offset)
-      delete this._handledragging
+      console.log(this._handledragCounter)
+      if (this._handledragCounter > 0) {
+        const center = geometry.getCenter()
+        const point = this._adsorbPoint
+        const offset = this._getCoordsOffset(center, point)
+        geometry.translate(...offset)
+        geometry._editor._shadow.translate(...offset)
+      }
+      delete this._handledragCounter
     }
   }
 
@@ -475,8 +503,9 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _offGeometryEvents() {
-    // this._geometry.off('shapechange', this._setShadowCoordinates, this)
+    this._geometry.off('handledragstart', this._initGandleDragCounter, this)
     this._geometry.off('handledragging', this._setShadowCenter, this)
+    this._geometry.off('shapechange', this._setShadowCoordinates, this)
     this._geometry.off('editrecord', this._resetShadowCenter, this)
   }
 

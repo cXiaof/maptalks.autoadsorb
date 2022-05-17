@@ -3701,14 +3701,7 @@ var options = {
   mode: 'auto',
   distance: 10,
   shellPoints: 60,
-  needCtrl: false,
-  cursorSymbol: {
-    markerType: 'ellipse',
-    markerFill: '#de3333',
-    markerWidth: 4,
-    markerHeight: 4,
-    markerLineWidth: 0
-  }
+  needCtrl: false
 };
 
 var cursorLayerName = INTERNAL_LAYER_PREFIX + 'cxiaof_autoadsorb';
@@ -3804,9 +3797,21 @@ var Autoadsorb = function (_maptalks$Class) {
 
   Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
     this._cursorLayer = new VectorLayer(cursorLayerName, {
-      style: { symbol: this.options['cursorSymbol'] }
+      style: { symbol: this._getCursorSymbol() }
     });
     this._cursorLayer.addTo(this._map).bringToFront();
+  };
+
+  Autoadsorb.prototype._getCursorSymbol = function _getCursorSymbol(symbol) {
+    return Object.assign({
+      markerType: 'ellipse',
+      markerFill: '#fff',
+      markerLineColor: '#272822',
+      markerLineWidth: 2,
+      markerWidth: 10,
+      markerHeight: 10,
+      opacity: 0.4
+    }, symbol);
   };
 
   Autoadsorb.prototype._saveAdsorbLayers = function _saveAdsorbLayers() {
@@ -3988,6 +3993,8 @@ var Autoadsorb = function (_maptalks$Class) {
           y = _adsorbPoint.y;
 
       this._cursor.setCoordinates([x, y]);
+    } else {
+      this._cursor.setSymbol(this._getCursorSymbol());
     }
   };
 
@@ -4027,11 +4034,17 @@ var Autoadsorb = function (_maptalks$Class) {
     });
     if (points.length > 0) {
       nearestFeature = this._getNearestPoint(mousePoint, points);
+      this._cursor.setSymbol(this._getCursorSymbol({
+        markerFill: '#f5871f',
+        markerLineColor: '#0078a8',
+        opacity: 1
+      }));
     } else {
       var lines = features.filter(function (feature) {
         return feature.geometry.type === 'LineString';
       });
       nearestFeature = this._getNearestPointOnLine(mousePoint, lines);
+      this._cursor.setSymbol(this._getCursorSymbol({ markerLineColor: '#0078a8', opacity: 1 }));
     }
     var _nearestFeature$geome = nearestFeature.geometry.coordinates,
         x = _nearestFeature$geome[0],
@@ -4050,18 +4063,18 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {
-    // this._geometry.on('shapechange', this._setShadowCoordinates, this)
+    this._geometry.on('handledragstart', this._initGandleDragCounter, this);
     this._geometry.on('handledragging', this._setShadowCenter, this);
+    this._geometry.on('shapechange', this._setShadowCoordinates, this);
     this._geometry.on('editrecord', this._resetShadowCenter, this);
   };
 
-  Autoadsorb.prototype._setShadowCoordinates = function _setShadowCoordinates(e) {
-    if (!this._needDeal || !this._adsorbPoint) return;
-    var geometry = e.target;
+  Autoadsorb.prototype._initGandleDragCounter = function _initGandleDragCounter() {
+    this._handledragCounter = 0;
   };
 
   Autoadsorb.prototype._setShadowCenter = function _setShadowCenter(e) {
-    this._handledragging = true;
+    this._handledragCounter++;
     var geometry = e.target;
     var center = geometry.getCenter();
     var point = this._adsorbPoint || this._mousePoint;
@@ -4073,21 +4086,29 @@ var Autoadsorb = function (_maptalks$Class) {
     return [coordsTo.x - coordsFrom.x, coordsTo.y - coordsFrom.y];
   };
 
+  Autoadsorb.prototype._setShadowCoordinates = function _setShadowCoordinates(e) {
+    this._handledragCounter--;
+    if (!this._needDeal || !this._adsorbPoint) return;
+    var geometry = e.target;
+  };
+
   Autoadsorb.prototype._resetShadowCenter = function _resetShadowCenter(e) {
     if (!this._adsorbPoint) return;
     var geometry = e.target;
     if (geometry instanceof Marker) {
       geometry.setCoordinates(this._adsorbPoint);
     } else {
-      var _geometry$_editor$_sh;
+      console.log(this._handledragCounter);
+      if (this._handledragCounter > 0) {
+        var _geometry$_editor$_sh;
 
-      if (!this._handledragging) return;
-      var center = geometry.getCenter();
-      var point = this._adsorbPoint;
-      var offset = this._getCoordsOffset(center, point);
-      geometry.translate.apply(geometry, offset);
-      (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
-      delete this._handledragging;
+        var center = geometry.getCenter();
+        var point = this._adsorbPoint;
+        var offset = this._getCoordsOffset(center, point);
+        geometry.translate.apply(geometry, offset);
+        (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
+      }
+      delete this._handledragCounter;
     }
   };
 
@@ -4172,8 +4193,9 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._offGeometryEvents = function _offGeometryEvents() {
-    // this._geometry.off('shapechange', this._setShadowCoordinates, this)
+    this._geometry.off('handledragstart', this._initGandleDragCounter, this);
     this._geometry.off('handledragging', this._setShadowCenter, this);
+    this._geometry.off('shapechange', this._setShadowCoordinates, this);
     this._geometry.off('editrecord', this._resetShadowCenter, this);
   };
 
