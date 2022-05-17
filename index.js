@@ -370,11 +370,18 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _registerGeometryEvents() {
+    this._geometry.on('handledragend', this._checkCenter, this)
     this._geometry.on('shapechange', this._setShadowCoordinates, this)
     this._geometry.on('editrecord', this._resetShadowCenter, this)
   }
 
+  _checkCenter() {
+    this._dragCenterHandle = this._shapechange
+    delete this._shapechange
+  }
+
   _setShadowCoordinates(e) {
+    this._shapechange = true
     if (!this._needDeal || !this._adsorbPoint) return
     const geometry = e.target
   }
@@ -385,11 +392,13 @@ export class Autoadsorb extends maptalks.Class {
     if (geometry instanceof maptalks.Marker) {
       geometry.setCoordinates(this._adsorbPoint)
     } else {
-      // const center = geometry.getCenter()
-      // const point = this._adsorbPoint
-      // const offset = [point.x - center.x, point.y - center.y]
-      // geometry.translate(...offset)
-      // geometry._editor._shadow.translate(...offset)
+      if (this._dragCenterHandle) {
+        const center = geometry.getCenter()
+        const point = this._adsorbPoint
+        const offset = [point.x - center.x, point.y - center.y]
+        geometry.translate(...offset)
+        geometry._editor._shadow.translate(...offset)
+      }
     }
   }
 

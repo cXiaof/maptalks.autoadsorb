@@ -4068,11 +4068,18 @@ var Autoadsorb = function (_maptalks$Class) {
   };
 
   Autoadsorb.prototype._registerGeometryEvents = function _registerGeometryEvents() {
+    this._geometry.on('handledragend', this._checkCenter, this);
     this._geometry.on('shapechange', this._setShadowCoordinates, this);
     this._geometry.on('editrecord', this._resetShadowCenter, this);
   };
 
+  Autoadsorb.prototype._checkCenter = function _checkCenter() {
+    this._dragCenterHandle = this._shapechange;
+    delete this._shapechange;
+  };
+
   Autoadsorb.prototype._setShadowCoordinates = function _setShadowCoordinates(e) {
+    this._shapechange = true;
     if (!this._needDeal || !this._adsorbPoint) return;
     var geometry = e.target;
   };
@@ -4083,11 +4090,15 @@ var Autoadsorb = function (_maptalks$Class) {
     if (geometry instanceof maptalks.Marker) {
       geometry.setCoordinates(this._adsorbPoint);
     } else {
-      // const center = geometry.getCenter()
-      // const point = this._adsorbPoint
-      // const offset = [point.x - center.x, point.y - center.y]
-      // geometry.translate(...offset)
-      // geometry._editor._shadow.translate(...offset)
+      if (this._dragCenterHandle) {
+        var _geometry$_editor$_sh;
+
+        var center = geometry.getCenter();
+        var point = this._adsorbPoint;
+        var offset = [point.x - center.x, point.y - center.y];
+        geometry.translate.apply(geometry, offset);
+        (_geometry$_editor$_sh = geometry._editor._shadow).translate.apply(_geometry$_editor$_sh, offset);
+      }
     }
   };
 
