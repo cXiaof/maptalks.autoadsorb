@@ -8,6 +8,7 @@ import rbush from 'geojson-rbush'
 import difference from 'lodash.difference'
 import differenceWith from 'lodash.differencewith'
 import findIndex from 'lodash.findindex'
+import isEqual from 'lodash.isequal'
 import * as maptalks from 'maptalks'
 import { shallowDiffCoords } from './utils'
 
@@ -453,19 +454,28 @@ export class Autoadsorb extends maptalks.Class {
 
   _setShadowPolygon(geo) {
     const coords = geo.getCoordinates()
-    if (coords.length > 1) return this._setShadowPolygonWithHoles(geo)
-    const [coordsOld0] = this._geometryCoords
-    const coords0 = coords[0]
-    const diffs = differenceWith(coords0, coordsOld0, shallowDiffCoords)
-    if (diffs.length === 0) return
-    const coordsIndex = findIndex(coords0, diffs[0])
-    coords[0][coordsIndex] = this._adsorbPoint
-    if (coordsIndex === 0) coords[0][coords0.length - 1] = this._adsorbPoint
+    const coordsOld = this._geometryCoords
+    const shapeIndex = this._getShapeIndex(coords)
+    const coordsOldTarget = coordsOld[shapeIndex]
+    const coordsTarget = coords[shapeIndex]
+    const coordsDiffs = differenceWith(
+      coordsTarget,
+      coordsOldTarget,
+      shallowDiffCoords,
+    )
+    if (coordsDiffs.length === 0) return
+    const coordsIndex = findIndex(coordsTarget, coordsDiffs[0])
+    coords[shapeIndex][coordsIndex] = this._adsorbPoint
+    if (coordsIndex === 0)
+      coords[shapeIndex][coordsTarget.length - 1] = this._adsorbPoint
     geo._editor._shadow.setCoordinates(coords)
   }
 
-  _setShadowPolygonWithHoles(geo) {
-    console.log(geo)
+  _getShapeIndex(coords) {
+    const coordsOld = this._geometryCoords
+    const shapeDiffs = differenceWith(coords, coordsOld, isEqual)
+    const shapeIndex = findIndex(coords, (item) => isEqual(item, shapeDiffs[0]))
+    return shapeIndex
   }
 
   _resetShadowCenter(e) {
