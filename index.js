@@ -5,7 +5,11 @@ import nearestPoint from '@turf/nearest-point'
 import nearestPointOnLine from '@turf/nearest-point-on-line'
 import polygonToLine from '@turf/polygon-to-line'
 import rbush from 'geojson-rbush'
+import difference from 'lodash.difference'
+import differenceWith from 'lodash.differencewith'
+import findIndex from 'lodash.findindex'
 import * as maptalks from 'maptalks'
+import { shallowDiffCoords } from './utils'
 
 const options = {
   layers: [],
@@ -70,6 +74,7 @@ export class Autoadsorb extends maptalks.Class {
       if (!this._map) this._addTo(drawTool.getMap())
       this._disableMapTool()
       this._geometry = geometry
+      this._geometryCoords = geometry.getCoordinates()
       geometry.on('editstart', this._enable, this)
       geometry.on('editend remove', this._disable, this)
       if (geometry.isEditing()) this._enable()
@@ -159,10 +164,12 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _getAllAssistGeos() {
-    return this._assistLayers.reduce(
+    let assistGeos = this._assistLayers.reduce(
       (target, layer) => target.concat(layer.getGeometries()),
       [],
     )
+    if (this._geometry) assistGeos = difference(assistGeos, [this._geometry])
+    return assistGeos
   }
 
   _parseToPoints(geos) {
@@ -289,7 +296,11 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _updateAdsorbPoint(coordinate) {
-    if (!this._needFindGeometry) return
+    if (!this._needFindGeometry) {
+      this._cursor.setSymbol(this._getCursorSymbol())
+      return
+    }
+
     const availGeos = this._findGeometry(coordinate)
     if (availGeos.length > 0) {
       this._adsorbPoint = this._getAdsorbPoint(availGeos)
@@ -388,16 +399,17 @@ export class Autoadsorb extends maptalks.Class {
       this._setShadowEllipse(geometry)
     } else {
       if (this._draggingCenter()) return
-      const coords = geometry.getCoordinates()
-      coords.length === 1
-        ? this._setShadowCommon(geometry)
-        : this._setShadowWithHoles(geometry)
+      if (geometry instanceof maptalks.LineString) {
+        this._setShadowLineString(geometry)
+      } else {
+        this._setShadowPolygon(geometry)
+      }
     }
   }
 
   _draggingCenter() {
-    return (
-      this._dragCenterHandle !== null &&
+    return !(
+      this._dragCenterHandle === null ||
       maptalks.Util.isNil(this._dragCenterHandle)
     )
   }
@@ -429,31 +441,50 @@ export class Autoadsorb extends maptalks.Class {
     return [width * 2, height * 2]
   }
 
-  _setShadowCommon(geo) {
+  _setShadowLineString(geo) {
     const coords = geo.getCoordinates()
-    const coords0 = coords[0]
-    console.log(coords0)
+    const coordsOld = this._geometryCoords
+    const diffs = differenceWith(coords, coordsOld, shallowDiffCoords)
+    if (diffs.length === 0) return
+    const coordsIndex = findIndex(coords, diffs[0])
+    coords[coordsIndex] = this._adsorbPoint
+    geo._editor._shadow.setCoordinates(coords)
   }
 
-  _setShadowWithHoles(geo) {
+  _setShadowPolygon(geo) {
+    const coords = geo.getCoordinates()
+    if (coords.length > 1) return this._setShadowPolygonWithHoles(geo)
+    const [coordsOld0] = this._geometryCoords
+    const coords0 = coords[0]
+    const diffs = differenceWith(coords0, coordsOld0, shallowDiffCoords)
+    if (diffs.length === 0) return
+    const coordsIndex = findIndex(coords0, diffs[0])
+    coords[0][coordsIndex] = this._adsorbPoint
+    if (coordsIndex === 0) coords[0][coords0.length - 1] = this._adsorbPoint
+    geo._editor._shadow.setCoordinates(coords)
+  }
+
+  _setShadowPolygonWithHoles(geo) {
     console.log(geo)
   }
 
   _resetShadowCenter(e) {
     delete this._shapechange
-    if (!this._adsorbPoint) return
     const geometry = e.target
-    if (geometry instanceof maptalks.Marker) {
-      geometry.setCoordinates(this._adsorbPoint)
-    } else {
-      if (this._dragCenterHandle) {
-        const center = geometry.getCenter()
-        const point = this._adsorbPoint
-        const offset = [point.x - center.x, point.y - center.y]
-        geometry.translate(...offset)
-        geometry._editor._shadow.translate(...offset)
+    if (this._adsorbPoint) {
+      if (geometry instanceof maptalks.Marker) {
+        geometry.setCoordinates(this._adsorbPoint)
+      } else {
+        if (this._dragCenterHandle) {
+          const center = geometry.getCenter()
+          const point = this._adsorbPoint
+          const offset = [point.x - center.x, point.y - center.y]
+          geometry.translate(...offset)
+          geometry._editor._shadow.translate(...offset)
+        }
       }
     }
+    this._geometryCoords = geometry.getCoordinates()
     delete this._dragCenterHandle
   }
 
@@ -553,6 +584,7 @@ export class Autoadsorb extends maptalks.Class {
   }
 
   _offGeometryEvents() {
+    this._geometry.off('handledragend', this._checkCenter, this)
     this._geometry.off('shapechange', this._setShadowCoordinates, this)
     this._geometry.off('editrecord', this._resetShadowCenter, this)
   }
