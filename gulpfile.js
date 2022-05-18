@@ -6,15 +6,15 @@ const bundleHelper = new BundleHelper(pkg)
 gulp.task('build', () => bundleHelper.bundle('index.js'))
 
 gulp.task(
-    'minify',
-    gulp.series('build', (done) => {
-        bundleHelper.minify()
-        done()
-    })
+  'minify',
+  gulp.series('build', (done) => {
+    bundleHelper.minify()
+    done()
+  }),
 )
 
 gulp.task('watch', () =>
-    gulp.watch(['index.js', './gulpfile.js'], gulp.series('build'))
+  gulp.watch(['index.js', './gulpfile.js'], gulp.series('build')),
 )
 
 // const { TestHelper } = require('maptalks-build-helpers')
