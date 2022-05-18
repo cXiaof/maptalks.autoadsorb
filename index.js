@@ -293,14 +293,17 @@ export class Autoadsorb extends maptalks.Class {
     delete this._adsorbPoint
     if (this.options['needCtrl'] === domEvent.ctrlKey) {
       this._updateAdsorbPoint(coordinate)
+    } else {
+      this._resetCursorSymbol()
     }
   }
 
+  _resetCursorSymbol() {
+    this._cursor.setSymbol(this._getCursorSymbol())
+  }
+
   _updateAdsorbPoint(coordinate) {
-    if (!this._needFindGeometry) {
-      this._cursor.setSymbol(this._getCursorSymbol())
-      return
-    }
+    if (!this._needFindGeometry) return this._resetCursorSymbol()
 
     const availGeos = this._findGeometry(coordinate)
     if (availGeos.length > 0) {
@@ -310,7 +313,7 @@ export class Autoadsorb extends maptalks.Class {
       const { x, y } = this._adsorbPoint
       this._cursor.setCoordinates([x, y])
     } else {
-      this._cursor.setSymbol(this._getCursorSymbol())
+      this._resetCursorSymbol()
     }
   }
 

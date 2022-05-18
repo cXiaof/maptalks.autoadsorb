@@ -57,8 +57,8 @@ drawTool.on('drawend', (param) => {
       geometry.endEdit()
       autoAdsorb.refreshTargets()
     } else {
-      geometry.startEdit()
       autoAdsorb.bindGeometry(geometry)
+      geometry.startEdit()
     }
   })
 })

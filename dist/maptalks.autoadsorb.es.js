@@ -10522,14 +10522,17 @@ var Autoadsorb = function (_maptalks$Class) {
     delete this._adsorbPoint;
     if (this.options['needCtrl'] === domEvent.ctrlKey) {
       this._updateAdsorbPoint(coordinate);
+    } else {
+      this._resetCursorSymbol();
     }
   };
 
+  Autoadsorb.prototype._resetCursorSymbol = function _resetCursorSymbol() {
+    this._cursor.setSymbol(this._getCursorSymbol());
+  };
+
   Autoadsorb.prototype._updateAdsorbPoint = function _updateAdsorbPoint(coordinate) {
-    if (!this._needFindGeometry) {
-      this._cursor.setSymbol(this._getCursorSymbol());
-      return;
-    }
+    if (!this._needFindGeometry) return this._resetCursorSymbol();
 
     var availGeos = this._findGeometry(coordinate);
     if (availGeos.length > 0) {
@@ -10542,7 +10545,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
       this._cursor.setCoordinates([x, y]);
     } else {
-      this._cursor.setSymbol(this._getCursorSymbol());
+      this._resetCursorSymbol();
     }
   };
 
