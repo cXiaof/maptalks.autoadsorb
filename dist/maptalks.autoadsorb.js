@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v1.0.0-alpha.1
+ * maptalks.autoadsorb v1.0.0-alpha.3
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
  */
@@ -10300,7 +10300,7 @@ var Autoadsorb = function (_maptalks$Class) {
       if (!this._map) this._addTo(drawTool.getMap());
       this._drawTool = drawTool;
       drawTool.on('enable', this._enable, this);
-      drawTool.on('disable remove', this._disable, this);
+      drawTool.on('disable', this._disable, this);
       if (drawTool.isEnabled()) this._enable();
     }
     return this;
@@ -10313,7 +10313,7 @@ var Autoadsorb = function (_maptalks$Class) {
       this._geometry = geometry;
       this._geometryCoords = geometry.getCoordinates();
       geometry.on('editstart', this._enable, this);
-      geometry.on('editend remove', this._disable, this);
+      geometry.on('editend', this._disable, this);
       if (geometry.isEditing()) this._enable();
     }
     return this;
@@ -10324,13 +10324,12 @@ var Autoadsorb = function (_maptalks$Class) {
     if (this._cursorLayer) this._cursorLayer.remove();
     delete this._treePoints;
     delete this._treeLines;
-    delete this._cursorLayer;
-    delete this._assistLayers;
-    delete this._mousePoint;
     delete this._geosSetPoint;
     delete this._geosSetLine;
-    delete this._cursor;
+    delete this._mousePoint;
     delete this._adsorbPoint;
+    delete this._cursor;
+    delete this._cursorLayer;
     delete this._drawTool;
     delete this._map;
   };
@@ -10338,7 +10337,6 @@ var Autoadsorb = function (_maptalks$Class) {
   Autoadsorb.prototype._addTo = function _addTo(map) {
     this._map = map;
     this._newCursorLayer();
-    this._saveAdsorbLayers();
   };
 
   Autoadsorb.prototype._newCursorLayer = function _newCursorLayer() {
@@ -10360,20 +10358,6 @@ var Autoadsorb = function (_maptalks$Class) {
     }, symbol);
   };
 
-  Autoadsorb.prototype._saveAdsorbLayers = function _saveAdsorbLayers() {
-    var _this2 = this;
-
-    this._assistLayers = [];
-    this.options['layers'].forEach(function (layer) {
-      if (typeof layer === 'string') {
-        layer = _this2._map.getLayer(layer);
-      }
-      if (layer instanceof maptalks.VectorLayer) {
-        _this2._assistLayers.push(layer);
-      }
-    });
-  };
-
   Autoadsorb.prototype._enable = function _enable() {
     this._isEnable = true;
     if (this._cursorLayer) this._cursorLayer.show();
@@ -10385,7 +10369,6 @@ var Autoadsorb = function (_maptalks$Class) {
   Autoadsorb.prototype._updateGeosSet = function _updateGeosSet() {
     this._geosSetPoint = [];
     this._geosSetLine = [];
-
     var geos = this._getAllAssistGeos();
     if (['auto', 'vertux'].includes(this.options['mode'])) {
       this._geosSetPoint = this._parseToPoints(geos);
@@ -10393,16 +10376,26 @@ var Autoadsorb = function (_maptalks$Class) {
     if (['auto', 'border'].includes(this.options['mode'])) {
       this._geosSetLine = this._parseToLines(geos);
     }
-
     this._updateRBushTree();
   };
 
   Autoadsorb.prototype._getAllAssistGeos = function _getAllAssistGeos() {
-    var assistGeos = this._assistLayers.reduce(function (target, layer) {
+    var assistLayers = this._getAssistLayers();
+    var assistGeos = assistLayers.reduce(function (target, layer) {
       return target.concat(layer.getGeometries());
     }, []);
     if (this._geometry) assistGeos = lodash_difference(assistGeos, [this._geometry]);
     return assistGeos;
+  };
+
+  Autoadsorb.prototype._getAssistLayers = function _getAssistLayers() {
+    var _this2 = this;
+
+    return this.options['layers'].reduce(function (target, layer) {
+      if (typeof layer === 'string') layer = _this2._map.getLayer(layer);
+      if (layer instanceof maptalks.VectorLayer) target.push(layer);
+      return target;
+    }, []);
   };
 
   Autoadsorb.prototype._parseToPoints = function _parseToPoints(geos) {
@@ -10845,6 +10838,7 @@ var Autoadsorb = function (_maptalks$Class) {
   Autoadsorb.prototype._resetGeosSet = function _resetGeosSet() {
     this._geosSetPoint = [];
     this._geosSetLine = [];
+    this._updateRBushTree();
   };
 
   Autoadsorb.prototype._disableMapTool = function _disableMapTool() {
@@ -10860,6 +10854,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-alpha.1, requires maptalks@>=0.46.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-alpha.3, requires maptalks@>=0.46.0.');
 
 })));

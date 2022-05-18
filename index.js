@@ -64,7 +64,7 @@ export class Autoadsorb extends maptalks.Class {
       if (!this._map) this._addTo(drawTool.getMap())
       this._drawTool = drawTool
       drawTool.on('enable', this._enable, this)
-      drawTool.on('disable remove', this._disable, this)
+      drawTool.on('disable', this._disable, this)
       if (drawTool.isEnabled()) this._enable()
     }
     return this
@@ -77,7 +77,7 @@ export class Autoadsorb extends maptalks.Class {
       this._geometry = geometry
       this._geometryCoords = geometry.getCoordinates()
       geometry.on('editstart', this._enable, this)
-      geometry.on('editend remove', this._disable, this)
+      geometry.on('editend', this._disable, this)
       if (geometry.isEditing()) this._enable()
     }
     return this
@@ -88,13 +88,12 @@ export class Autoadsorb extends maptalks.Class {
     if (this._cursorLayer) this._cursorLayer.remove()
     delete this._treePoints
     delete this._treeLines
-    delete this._cursorLayer
-    delete this._assistLayers
-    delete this._mousePoint
     delete this._geosSetPoint
     delete this._geosSetLine
-    delete this._cursor
+    delete this._mousePoint
     delete this._adsorbPoint
+    delete this._cursor
+    delete this._cursorLayer
     delete this._drawTool
     delete this._map
   }
@@ -102,7 +101,6 @@ export class Autoadsorb extends maptalks.Class {
   _addTo(map) {
     this._map = map
     this._newCursorLayer()
-    this._saveAdsorbLayers()
   }
 
   _newCursorLayer() {
@@ -127,18 +125,6 @@ export class Autoadsorb extends maptalks.Class {
     )
   }
 
-  _saveAdsorbLayers() {
-    this._assistLayers = []
-    this.options['layers'].forEach((layer) => {
-      if (typeof layer === 'string') {
-        layer = this._map.getLayer(layer)
-      }
-      if (layer instanceof maptalks.VectorLayer) {
-        this._assistLayers.push(layer)
-      }
-    })
-  }
-
   _enable() {
     this._isEnable = true
     if (this._cursorLayer) this._cursorLayer.show()
@@ -152,7 +138,6 @@ export class Autoadsorb extends maptalks.Class {
   _updateGeosSet() {
     this._geosSetPoint = []
     this._geosSetLine = []
-
     const geos = this._getAllAssistGeos()
     if (['auto', 'vertux'].includes(this.options['mode'])) {
       this._geosSetPoint = this._parseToPoints(geos)
@@ -160,17 +145,25 @@ export class Autoadsorb extends maptalks.Class {
     if (['auto', 'border'].includes(this.options['mode'])) {
       this._geosSetLine = this._parseToLines(geos)
     }
-
     this._updateRBushTree()
   }
 
   _getAllAssistGeos() {
-    let assistGeos = this._assistLayers.reduce(
+    const assistLayers = this._getAssistLayers()
+    let assistGeos = assistLayers.reduce(
       (target, layer) => target.concat(layer.getGeometries()),
       [],
     )
     if (this._geometry) assistGeos = difference(assistGeos, [this._geometry])
     return assistGeos
+  }
+
+  _getAssistLayers() {
+    return this.options['layers'].reduce((target, layer) => {
+      if (typeof layer === 'string') layer = this._map.getLayer(layer)
+      if (layer instanceof maptalks.VectorLayer) target.push(layer)
+      return target
+    }, [])
   }
 
   _parseToPoints(geos) {
@@ -610,6 +603,7 @@ export class Autoadsorb extends maptalks.Class {
   _resetGeosSet() {
     this._geosSetPoint = []
     this._geosSetLine = []
+    this._updateRBushTree()
   }
 
   _disableMapTool() {

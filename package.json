@@ -1,6 +1,6 @@
 {
   "name": "maptalks.autoadsorb",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.3",
   "description": "Adsorb vertux/border/both of geos on layer When drawing or editing",
   "keywords": [
     "maptalks",
