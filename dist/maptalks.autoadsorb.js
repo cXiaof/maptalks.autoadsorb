@@ -1,5 +1,5 @@
 /*!
- * maptalks.autoadsorb v0.4.0
+ * maptalks.autoadsorb v1.0.0-alpha.1
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
  */
@@ -10857,6 +10857,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v0.4.0, requires maptalks@>=0.46.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-alpha.1, requires maptalks@>=0.46.0.');
 
 })));
