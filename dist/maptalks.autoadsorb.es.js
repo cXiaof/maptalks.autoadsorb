@@ -1,10 +1,7 @@
 /*!
- * maptalks.autoadsorb v1.0.0-alpha.3
+ * maptalks.autoadsorb v1.0.0-beta.1
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
- */
-/*!
- * requires maptalks@>=0.46.0 
  */
 import { Circle, Class, DrawTool, Ellipse, Geometry, GeometryCollection, INTERNAL_LAYER_PREFIX, LineString, Marker, MultiLineString, MultiPoint, Util, VectorLayer } from 'maptalks';
 
@@ -10304,7 +10301,7 @@ var Autoadsorb = function (_maptalks$Class) {
 
   Autoadsorb.prototype.bindGeometry = function bindGeometry(geometry) {
     if (geometry instanceof Geometry) {
-      if (!this._map) this._addTo(drawTool.getMap());
+      if (!this._map) this._addTo(geometry.getMap());
       this._disableMapTool();
       this._geometry = geometry;
       this._geometryCoords = geometry.getCoordinates();
@@ -10848,4 +10845,4 @@ Autoadsorb.mergeOptions(options);
 
 export { Autoadsorb };
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-alpha.3, requires maptalks@>=0.46.0.');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-beta.1');

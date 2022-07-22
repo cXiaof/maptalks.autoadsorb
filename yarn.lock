@@ -119,12 +119,12 @@
 
 "@maptalks/feature-filter@^1.0.0":
   version "1.0.0"
-  resolved "https://registry.npmjs.org/@maptalks/feature-filter/-/feature-filter-1.0.0.tgz#bfcc7f705e6de5c6c3d3802a3b5081272c877fc8"
+  resolved "https://registry.npmmirror.com/@maptalks/feature-filter/-/feature-filter-1.0.0.tgz#bfcc7f705e6de5c6c3d3802a3b5081272c877fc8"
   integrity sha512-JbEOtPGRrT6R8K4zFPEBUtcXNIzdVliK/X9OTmFt4GhEZU79TgnwElCb68GAcC+5c0TAHgY73KBdZPb6M9yaTg==
 
 "@maptalks/function-type@^1.2.3":
   version "1.2.3"
-  resolved "https://registry.npmjs.org/@maptalks/function-type/-/function-type-1.2.3.tgz#2f5c33b095af452c727026801bf1496ff78fe777"
+  resolved "https://registry.npmmirror.com/@maptalks/function-type/-/function-type-1.2.3.tgz#2f5c33b095af452c727026801bf1496ff78fe777"
   integrity sha512-q6i14qss+Y1bv5VzIvDFrsOGvWCih2p6LS2NcfgU7VrnjAlCRW1D6iVGDW2N9XCuJsXwg/9QJsTrqEIz6T7eUg==
 
 "@nodelib/fs.scandir@2.1.5":
@@ -2094,7 +2094,7 @@ fragment-cache@^0.2.1:
 
 frustum-intersects@^0.1.0:
   version "0.1.0"
-  resolved "https://registry.npmjs.org/frustum-intersects/-/frustum-intersects-0.1.0.tgz#d1d144099a40d8c5168b62acc83731434f5fa709"
+  resolved "https://registry.npmmirror.com/frustum-intersects/-/frustum-intersects-0.1.0.tgz#d1d144099a40d8c5168b62acc83731434f5fa709"
   integrity sha512-W0S6dmX5LJLtamimyuKhvbkpDTm5eVfMgk4X9yXNyWQ1zZ/cMm0PZoeX9Pm0tL302l+erQVrdfRGhV3ILfeTeQ==
 
 fs-mkdirp-stream@^1.0.0:
@@ -3017,10 +3017,10 @@ maptalks-build-helpers@^0.4.5:
     rollup-plugin-node-resolve "^3.0.0"
     uglify-js "^3.0.28"
 
-maptalks@^1.0.0-rc.4:
-  version "1.0.0-rc.4"
-  resolved "https://registry.npmjs.org/maptalks/-/maptalks-1.0.0-rc.4.tgz#990ba81bb26c2e1e85c4a4eb557c69267611f8d6"
-  integrity sha512-XlZvs9iaD/OcKDeYkZSkZXwP4YWVD3is5fVDwGR4j00WWjtqFa4JxtSGWWeEniDm6rgWsjjQstvaZhLaS+1IBQ==
+maptalks@^1.0.0-rc.9:
+  version "1.0.0-rc.9"
+  resolved "https://registry.npmmirror.com/maptalks/-/maptalks-1.0.0-rc.9.tgz#dfac86b7be54c5d7d91bf0c0b3a2ab5fc879b198"
+  integrity sha512-LPBH3unm8Kmp+XpWBkz6oJmlstRPnfVN+m4sH0A1Rzxjxe6LjIXROGvJFl2SNkBXNiE5Q4FTMEjh38u0xXyb3w==
   dependencies:
     "@maptalks/feature-filter" "^1.0.0"
     "@maptalks/function-type" "^1.2.3"
@@ -3532,10 +3532,10 @@ preserve@^0.2.0:
   resolved "https://registry.npmjs.org/preserve/-/preserve-0.2.0.tgz#815ed1f6ebc65926f865b310c0713bcb3315ce4b"
   integrity sha1-gV7R9uvGWSb4ZbMQwHE7yzMVzks=
 
-prettier-plugin-organize-imports@^2.3.4:
-  version "2.3.4"
-  resolved "https://registry.npmjs.org/prettier-plugin-organize-imports/-/prettier-plugin-organize-imports-2.3.4.tgz#65473861ae5ab7960439fff270a2258558fbe9ba"
-  integrity sha512-R8o23sf5iVL/U71h9SFUdhdOEPsi3nm42FD/oDYIZ2PQa4TNWWuWecxln6jlIQzpZTDMUeO1NicJP6lLn2TtRw==
+prettier-plugin-organize-imports@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.npmmirror.com/prettier-plugin-organize-imports/-/prettier-plugin-organize-imports-3.0.0.tgz#39739423cc7069f2a3bfa58d14f8a502ff163df2"
+  integrity sha512-juSCJs5TMOqGGPaN/A/1xzWFzRPH2LG1LPLCr64dzKaVnPafJdtgDNmDVlU+8A4LbQzVJg0DTvgA8swBuIUhlg==
 
 prettier-plugin-packagejson@^2.2.18:
   version "2.2.18"
@@ -3544,10 +3544,10 @@ prettier-plugin-packagejson@^2.2.18:
   dependencies:
     sort-package-json "1.57.0"
 
-prettier@^2.6.2:
-  version "2.6.2"
-  resolved "https://registry.npmjs.org/prettier/-/prettier-2.6.2.tgz#e26d71a18a74c3d0f0597f55f01fb6c06c206032"
-  integrity sha512-PkUpF+qoXTqhOeWL9fu7As8LXsIUZ1WYaJiY/a7McAQzxjk82OF0tibkFXVCDImZtWxbvojFjerkiLb0/q8mew==
+prettier@^2.7.1:
+  version "2.7.1"
+  resolved "https://registry.npmmirror.com/prettier/-/prettier-2.7.1.tgz#e235806850d057f97bb08368a4f7d899f7760c64"
+  integrity sha512-ujppO+MkdPqoVINuDFDRLClm7D78qbDt0/NR+wp5FqEZOoTNAjPHWj17QRhu7geIHJfcNhRk1XVQmF8Bp3ye+g==
 
 pretty-hrtime@^1.0.0:
   version "1.0.3"
@@ -3605,7 +3605,7 @@ queue-microtask@^1.2.2:
 
 quickselect@^1.0.1:
   version "1.1.1"
-  resolved "https://registry.npmjs.org/quickselect/-/quickselect-1.1.1.tgz#852e412ce418f237ad5b660d70cffac647ae94c2"
+  resolved "https://registry.npmmirror.com/quickselect/-/quickselect-1.1.1.tgz#852e412ce418f237ad5b660d70cffac647ae94c2"
   integrity sha512-qN0Gqdw4c4KGPsBOQafj6yj/PA6c/L63f6CaZ/DCF/xF4Esu3jVmKLUDYxghFx8Kb/O7y9tI7x2RjTSXwdK1iQ==
 
 quickselect@^2.0.0:
@@ -3639,7 +3639,7 @@ raw-body@2.5.1:
 
 rbush@^2.0.2:
   version "2.0.2"
-  resolved "https://registry.npmjs.org/rbush/-/rbush-2.0.2.tgz#bb6005c2731b7ba1d5a9a035772927d16a614605"
+  resolved "https://registry.npmmirror.com/rbush/-/rbush-2.0.2.tgz#bb6005c2731b7ba1d5a9a035772927d16a614605"
   integrity sha512-XBOuALcTm+O/H8G90b6pzu6nX6v2zCKiFG4BJho8a+bY6AER6t8uQUZdi5bomQc0AprCWhEGa7ncAbbRap0bRA==
   dependencies:
     quickselect "^1.0.1"
@@ -4010,7 +4010,7 @@ side-channel@^1.0.4:
 
 simplify-js@^1.2.1:
   version "1.2.4"
-  resolved "https://registry.npmjs.org/simplify-js/-/simplify-js-1.2.4.tgz#7aab22d6df547ffd40ef0761ccd82b75287d45c7"
+  resolved "https://registry.npmmirror.com/simplify-js/-/simplify-js-1.2.4.tgz#7aab22d6df547ffd40ef0761ccd82b75287d45c7"
   integrity sha512-vITfSlwt7h/oyrU42R83mtzFpwYk3+mkH9bOHqq/Qw6n8rtR7aE3NZQ5fbcyCUVVmuMJR6ynsAhOfK2qoah8Jg==
 
 slash@^1.0.0:
@@ -4687,5 +4687,5 @@ yeast@0.1.2:
 
 zousan@^2.3.3:
   version "2.5.1"
-  resolved "https://registry.npmjs.org/zousan/-/zousan-2.5.1.tgz#514a8aad3cbba412fb59a4e0ebaffdd72e2dd4c6"
+  resolved "https://registry.npmmirror.com/zousan/-/zousan-2.5.1.tgz#514a8aad3cbba412fb59a4e0ebaffdd72e2dd4c6"
   integrity sha512-ZER+1EJNPHs9G3I6kTqhTmeqPjdU8XoaSIFzaUcSWmxcZBeXMuf5LM6Ih8LLNlQ46wg2Au+3ayn7KgjklVnOfA==

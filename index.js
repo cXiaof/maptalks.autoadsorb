@@ -72,7 +72,7 @@ export class Autoadsorb extends maptalks.Class {
 
   bindGeometry(geometry) {
     if (geometry instanceof maptalks.Geometry) {
-      if (!this._map) this._addTo(drawTool.getMap())
+      if (!this._map) this._addTo(geometry.getMap())
       this._disableMapTool()
       this._geometry = geometry
       this._geometryCoords = geometry.getCoordinates()
