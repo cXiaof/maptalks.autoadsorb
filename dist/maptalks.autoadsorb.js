@@ -3,6 +3,9 @@
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
  */
+/*!
+ * requires maptalks@>=0.46.0 
+ */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
 	typeof define === 'function' && define.amd ? define(['exports', 'maptalks'], factory) :
@@ -10851,6 +10854,6 @@ exports.Autoadsorb = Autoadsorb;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-beta.1');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-beta.1, requires maptalks@>=0.46.0.');
 
 })));

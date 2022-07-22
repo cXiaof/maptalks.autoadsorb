@@ -3,6 +3,9 @@
  * LICENSE : MIT
  * (c) 2016-2022 maptalks.org
  */
+/*!
+ * requires maptalks@>=0.46.0 
+ */
 import { Circle, Class, DrawTool, Ellipse, Geometry, GeometryCollection, INTERNAL_LAYER_PREFIX, LineString, Marker, MultiLineString, MultiPoint, Util, VectorLayer } from 'maptalks';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -10845,4 +10848,4 @@ Autoadsorb.mergeOptions(options);
 
 export { Autoadsorb };
 
-typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-beta.1');
+typeof console !== 'undefined' && console.log('maptalks.autoadsorb v1.0.0-beta.1, requires maptalks@>=0.46.0.');
